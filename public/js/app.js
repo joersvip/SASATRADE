@@ -1039,6 +1039,53 @@ function setupEvents() {
     });
   }
 
+  // Chart Visibility Toggle (Hidden by default to give massive space to tables & UI)
+  const btnToggleChart = document.getElementById("btnToggleChart");
+  const chartWorkspaceCard = document.getElementById("chartWorkspaceCard");
+  const btnToggleChartLabel = document.getElementById("btnToggleChartLabel");
+  const bottomWorkspaceCard = document.querySelector(".bottom-workspace-card");
+
+  if (btnToggleChart && chartWorkspaceCard) {
+    // Default to false (hidden) to satisfy user preference
+    const savedChartVisible = localStorage.getItem("apexai_chart_visible") === "true";
+
+    function setChartVisibility(show) {
+      if (show) {
+        chartWorkspaceCard.style.display = "flex";
+        chartWorkspaceCard.classList.remove("chart-hidden");
+        btnToggleChart.classList.add("active");
+        if (btnToggleChartLabel) btnToggleChartLabel.innerText = "Tutup Chart";
+        if (bottomWorkspaceCard) bottomWorkspaceCard.classList.remove("workspace-maximized");
+
+        // Force-render & resize chart slots
+        setTimeout(() => {
+          chartSlots.forEach((slot, idx) => {
+            if (idx < activeChartLayout && slot.engine) {
+              slot.engine.resize();
+            }
+          });
+        }, 80);
+      } else {
+        chartWorkspaceCard.style.display = "none";
+        chartWorkspaceCard.classList.add("chart-hidden");
+        btnToggleChart.classList.remove("active");
+        if (btnToggleChartLabel) btnToggleChartLabel.innerText = "Buka Chart";
+        if (bottomWorkspaceCard) bottomWorkspaceCard.classList.add("workspace-maximized");
+      }
+    }
+
+    // Set initial visibility
+    setChartVisibility(savedChartVisible);
+
+    btnToggleChart.addEventListener("click", () => {
+      const isCurrentlyVisible = chartWorkspaceCard.style.display !== "none" && !chartWorkspaceCard.classList.contains("chart-hidden");
+      const nextVisible = !isCurrentlyVisible;
+      localStorage.setItem("apexai_chart_visible", nextVisible ? "true" : "false");
+      setChartVisibility(nextVisible);
+      window.soundFx?.playClick();
+    });
+  }
+
   // Category filter tabs
   document.querySelectorAll(".market-tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {

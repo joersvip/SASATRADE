@@ -81,8 +81,9 @@ class TradingChartEngine {
   }
 
   resize() {
-    if (!this.canvas) return;
+    if (!this.canvas || !this.canvas.parentElement) return;
     const rect = this.canvas.parentElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
     const dpr = window.devicePixelRatio || 1;
     this.width = rect.width;
     this.height = rect.height;
@@ -90,6 +91,12 @@ class TradingChartEngine {
     this.canvas.width = this.width * dpr;
     this.canvas.height = this.height * dpr;
     this.ctx.scale(dpr, dpr);
+
+    if (this.candles && this.candles.length > 0) {
+      const totalW = this.candles.length * (this.candleWidth + this.candleGap);
+      const rightMargin = 80;
+      this.offsetX = (this.width - rightMargin) - totalW;
+    }
     this.render();
   }
 
@@ -103,7 +110,9 @@ class TradingChartEngine {
     const totalW = this.candles.length * (this.candleWidth + this.candleGap);
     const rightMargin = 80;
     this.offsetX = (this.width - rightMargin) - totalW;
-    this.render();
+    if (this.width > 0 && this.height > 0) {
+      this.render();
+    }
   }
 
   updateLivePrice(price, volume = 0) {

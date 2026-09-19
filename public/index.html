@@ -160,17 +160,47 @@
 
     <!-- LEFT / CENTER: WORKSPACE COLUMN (CHART + DOCKED BOTTOM TABS) -->
     <div class="left-workspace-column">
-      <!-- INTERACTIVE CHART -->
-      <section class="chart-container-card">
-      <div class="chart-header">
-        <div class="chart-title-area">
-          <span class="active-symbol-badge" id="headerSymbolBadge">EURUSD</span>
-          <span style="font-size:0.85rem; color:var(--text-secondary)" id="headerSymbolName">Euro / US Dollar</span>
-          <div class="active-price-info">
+      <!-- COMPACT MARKET & QUICK ORDER BAR (ALWAYS ACCESSIBLE) -->
+      <div class="compact-market-bar" id="compactMarketBar">
+        <div class="compact-market-info">
+          <div class="compact-symbol-group">
+            <span class="active-symbol-badge" id="headerSymbolBadge">EURUSD</span>
+            <span class="compact-symbol-name" id="headerSymbolName">Euro / US Dollar</span>
+          </div>
+          <div class="compact-price-group">
             <span class="live-bid-ask">Bid: <b id="headerLiveBid" style="color:var(--text-primary)">-</b></span>
             <span class="live-bid-ask">Ask: <b id="headerLiveAsk" style="color:var(--text-primary)">-</b></span>
             <span class="live-bid-ask" style="color:var(--neon-cyan)" id="headerSpread">Spread: -</span>
           </div>
+        </div>
+
+        <div class="compact-order-actions">
+          <div class="input-label-wrap">
+            <span>Lot:</span>
+            <input type="number" id="quickLotInput" class="order-input" value="0.01" step="0.01" min="0.01">
+          </div>
+          <div class="order-buttons-group">
+            <button class="btn-sell" id="quickSellBtn">
+              <span>INSTANT SELL</span>
+              <span class="btn-sub-price" id="quickSellPrice">@ -</span>
+            </button>
+            <button class="btn-buy" id="quickBuyBtn">
+              <span>INSTANT BUY</span>
+              <span class="btn-sub-price" id="quickBuyPrice">@ -</span>
+            </button>
+          </div>
+          <button class="btn-toggle-chart" id="btnToggleChart" title="Tampilkan / Sembunyikan Grafik Candlestick">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <span id="btnToggleChartLabel">Buka Chart</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE MULTI-CHART (COLLAPSIBLE, HIDDEN BY DEFAULT TO MAXIMIZE UI SPACE) -->
+      <section class="chart-container-card" id="chartWorkspaceCard" style="display: none;">
+      <div class="chart-header">
+        <div class="chart-title-area">
+          <span style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Grafik Candlestick & Indikator</span>
         </div>
 
         <div class="chart-header-controls">
@@ -318,31 +348,6 @@
             </div>
             <canvas id="chartCanvas3"></canvas>
           </div>
-        </div>
-      </div>
-
-      <!-- Quick Order Execution Bar -->
-      <div class="quick-order-bar">
-        <div class="order-inputs">
-          <div class="input-label-wrap">
-            <span>Lot / Kontrak:</span>
-            <input type="number" id="quickLotInput" class="order-input" value="0.01" step="0.01" min="0.01">
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-muted);">
-            Auto SL & TP dihitung cerdas oleh proteksi risiko
-
-          </div>
-        </div>
-
-        <div class="order-buttons-group">
-          <button class="btn-sell" id="quickSellBtn">
-            <span>INSTANT SELL</span>
-            <span class="btn-sub-price" id="quickSellPrice">@ 1.08640</span>
-          </button>
-          <button class="btn-buy" id="quickBuyBtn">
-            <span>INSTANT BUY</span>
-            <span class="btn-sub-price" id="quickBuyPrice">@ 1.08652</span>
-          </button>
         </div>
       </div>
     </section>
