@@ -711,7 +711,7 @@ function renderAISettingsUI() {
       masterBtn.className = "ai-master-toggle-btn active";
       masterBtn.innerHTML = `
         <span class="pulse-dot"></span>
-        <span>ROBOT AI: AKTIF</span>
+        <span>ROBOT AI: RUNNING (KLIK STOP)</span>
       `;
       if (statusBadge) {
         statusBadge.className = "ai-status-indicator online";
@@ -720,8 +720,8 @@ function renderAISettingsUI() {
     } else {
       masterBtn.className = "ai-master-toggle-btn paused";
       masterBtn.innerHTML = `
-        <span class="pulse-dot" style="background:#64748b"></span>
-        <span>ROBOT AI: PAUSED</span>
+        <span class="pulse-dot" style="background:#ffb703"></span>
+        <span>ROBOT AI: STOPPED (KLIK START)</span>
       `;
       if (statusBadge) {
         statusBadge.className = "ai-status-indicator paused";

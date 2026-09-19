@@ -26,27 +26,36 @@
       </div>
     </div>
 
-    <!-- Market Category Filter -->
-    <nav class="market-nav-tabs">
-      <button class="market-tab-btn active" data-category="all" id="tabCategoryAll">
-        <span>🌐 Semua Pasar</span>
+    <!-- CENTER SECTION: AI ROBOT MASTER START/STOP & MARKET CATEGORIES -->
+    <div class="navbar-center-group">
+      <!-- AI Master Start/Stop Switch (Prominent Center Button) -->
+      <button class="ai-master-toggle-btn paused" id="aiMasterToggle" title="Klik untuk Start / Stop Robot Trading AI (Otomatisasi Eksekusi Pasar)">
+        <span class="pulse-dot" style="background:#ffb703;"></span>
+        <span>ROBOT AI: STOPPED (KLIK START)</span>
       </button>
-      <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
-        <span>💱 Forex</span>
-      </button>
-      <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
-        <span>⚡ Crypto</span>
-      </button>
-      <button class="market-tab-btn" data-category="commodities" id="tabCategoryCommodities">
-        <span>🥇 Komoditas & Logam</span>
-      </button>
-      <button class="market-tab-btn" data-category="indices" id="tabCategoryIndices">
-        <span>📊 Indeks Saham</span>
-      </button>
-      <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
-        <span>📈 Saham Global</span>
-      </button>
-    </nav>
+
+      <!-- Market Category Filter -->
+      <nav class="market-nav-tabs">
+        <button class="market-tab-btn active" data-category="all" id="tabCategoryAll">
+          <span>🌐 Semua Pasar</span>
+        </button>
+        <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
+          <span>💱 Forex</span>
+        </button>
+        <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
+          <span>⚡ Crypto</span>
+        </button>
+        <button class="market-tab-btn" data-category="commodities" id="tabCategoryCommodities">
+          <span>🥇 Komoditas & Logam</span>
+        </button>
+        <button class="market-tab-btn" data-category="indices" id="tabCategoryIndices">
+          <span>📊 Indeks Saham</span>
+        </button>
+        <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
+          <span>📈 Saham Global</span>
+        </button>
+      </nav>
+    </div>
 
     <!-- Account Switcher & Bot Controls -->
     <div class="nav-actions">
@@ -109,12 +118,6 @@
         <svg style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 20 20">
           <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
         </svg>
-      </button>
-
-      <!-- AI Master Switch -->
-      <button class="ai-master-toggle-btn paused" id="aiMasterToggle">
-        <span class="pulse-dot" style="background:#64748b;"></span>
-        <span>ROBOT AI: PAUSED</span>
       </button>
     </div>
   </header>
