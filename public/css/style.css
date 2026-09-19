@@ -2607,6 +2607,48 @@ body.pro-fit-screen .trading-table td {
   box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
 }
 
+.btn-ai-auto-lot {
+  background: rgba(0, 240, 144, 0.15);
+  border: 1px solid var(--neon-green);
+  color: var(--neon-green);
+  font-size: 0.68rem;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--trans-smooth);
+}
+
+.btn-ai-auto-lot .ai-lot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--neon-green);
+  box-shadow: 0 0 6px var(--neon-green);
+}
+
+.btn-ai-auto-lot:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.btn-ai-auto-lot:not(.active) .ai-lot-dot {
+  background: #64748b;
+  box-shadow: none;
+}
+
+.order-input.ai-controlled {
+  border-color: rgba(0, 240, 144, 0.4);
+  color: var(--neon-green);
+  background: rgba(0, 240, 144, 0.06);
+  font-weight: 700;
+  cursor: default;
+}
+
 /* ==========================================================================
    MARKET INTEL & NEWS SHIELD DASHBOARD
    ========================================================================== */

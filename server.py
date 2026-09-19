@@ -381,6 +381,31 @@ class OpenOrderModel(BaseModel):
     sl: Optional[float] = None
     tp: Optional[float] = None
     strategy: Optional[str] = "Manual Trade"
+    use_ai_lot: Optional[bool] = True
+
+@app.get("/api/ai/calculate-lot")
+def get_ai_calculated_lot(symbol: str, sl: Optional[float] = None, direction: Optional[str] = "BUY"):
+    active_acc = account_mgr.get_active()
+    cfg = market_feed.get_symbol_info(symbol)
+    p_info = market_feed.prices.get(symbol, {"bid": 1.0, "ask": 1.0})
+    entry_p = p_info["ask"] if (direction or "BUY").upper() == "BUY" else p_info["bid"]
+    lot = ai_engine.calculate_lot_size(
+        symbol=symbol,
+        symbol_cfg=cfg,
+        account=active_acc,
+        entry_price=entry_p,
+        sl_price=sl,
+        confidence=85.0,
+        is_ai=True
+    )
+    return {
+        "success": True,
+        "symbol": symbol,
+        "recommended_lot": lot,
+        "mode": ai_engine.settings.get("lot_sizing_mode", "ai_dynamic"),
+        "account_currency": active_acc.get("currency", "USD") if active_acc else "USD",
+        "equity": active_acc.get("equity", 1000.0) if active_acc else 1000.0
+    }
 
 @app.post("/api/order/open")
 def open_order(body: OpenOrderModel):
@@ -388,15 +413,32 @@ def open_order(body: OpenOrderModel):
     if not active_acc:
         raise HTTPException(status_code=400, detail="Tidak ada akun aktif")
     
+    exec_lot = body.lot
+    is_ai_order = False
+    if exec_lot is None or exec_lot <= 0 or body.use_ai_lot:
+        cfg = market_feed.get_symbol_info(body.symbol)
+        p_info = market_feed.prices.get(body.symbol, {"bid": 1.0, "ask": 1.0})
+        entry_p = p_info["ask"] if body.direction.upper() == "BUY" else p_info["bid"]
+        exec_lot = ai_engine.calculate_lot_size(
+            symbol=body.symbol,
+            symbol_cfg=cfg,
+            account=active_acc,
+            entry_price=entry_p,
+            sl_price=body.sl,
+            confidence=85.0,
+            is_ai=True
+        )
+        is_ai_order = True
+
     result = trading_engine.open_position(
         account_id=active_acc["id"],
         symbol=body.symbol,
         direction=body.direction.upper(),
-        lot=body.lot,
+        lot=exec_lot,
         sl=body.sl,
         tp=body.tp,
-        strategy=body.strategy,
-        is_ai=False
+        strategy=body.strategy if not is_ai_order else f"AI Smart Lot ({body.strategy})",
+        is_ai=is_ai_order
     )
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Gagal membuka order"))

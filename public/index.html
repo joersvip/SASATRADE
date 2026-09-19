@@ -189,9 +189,12 @@
         </div>
 
         <div class="compact-order-actions">
-          <div class="input-label-wrap">
-            <span>Lot:</span>
-            <input type="number" id="quickLotInput" class="order-input" value="0.01" step="0.01" min="0.01">
+          <div class="input-label-wrap" id="lotInputWrap">
+            <button class="btn-ai-auto-lot active" id="btnToggleAiLot" type="button" title="Klik untuk beralih antara AI Auto Lot dan Manual Lot">
+              <span class="ai-lot-dot"></span>
+              <span id="btnAiLotText">⚡ AI LOT</span>
+            </button>
+            <input type="number" id="quickLotInput" class="order-input ai-controlled" value="0.01" step="0.01" min="0.01" readonly title="Besaran lot dikalkulasi otomatis oleh AI Engine sesuai modal dan keamanan margin akun Anda">
           </div>
           <div class="order-buttons-group">
             <button class="btn-sell" id="quickSellBtn">

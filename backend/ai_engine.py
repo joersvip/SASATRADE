@@ -588,7 +588,15 @@ class AIEngine:
             max_lot_by_margin = max_allowed_margin / margin_per_lot
             calculated_lot = min(calculated_lot, max_lot_by_margin)
 
-        # 7. Pembulatan dan Pembatasan Nilai Minimum & Maksimum
+        # 7. Beginner Safety Guardrail (Proteksi Khusus Akun Modal Pemula)
+        if usd_equity < 100.0:
+            calculated_lot = min(calculated_lot, 0.01)
+        elif usd_equity < 300.0:
+            calculated_lot = min(calculated_lot, 0.02)
+        elif usd_equity < 600.0:
+            calculated_lot = min(calculated_lot, 0.05)
+
+        # 8. Pembulatan dan Pembatasan Nilai Minimum & Maksimum
         final_lot = round(max(min_limit, min(calculated_lot, max_limit)), 2)
         return final_lot
 

@@ -79,6 +79,8 @@ async function initApp() {
   await fetchFullState();
   initMultiChartSystem();
   initWebSocket();
+  setupAiLotToggle();
+  updateAiRecommendedLot();
   fetchMarketIntel();
   fetchAiStrategies();
 }
@@ -1480,11 +1482,57 @@ function setupEvents() {
   });
 }
 
+let isAiAutoLotEnabled = true;
+
+async function updateAiRecommendedLot() {
+  const lotInput = document.getElementById("quickLotInput");
+  if (!lotInput || !isAiAutoLotEnabled) return;
+
+  try {
+    const sym = appState.activeSymbol || "EURUSD";
+    const res = await fetch(`/api/ai/calculate-lot?symbol=${sym}`);
+    const data = await res.json();
+    if (data.success && data.recommended_lot) {
+      lotInput.value = data.recommended_lot.toFixed(2);
+      lotInput.title = `Lot dikalkulasi otomatis oleh AI Engine (${data.recommended_lot} lot) disesuaikan dengan modal (${data.account_currency} ${data.equity.toLocaleString()}) dan margin akun Anda.`;
+    }
+  } catch (e) {
+    console.warn("Gagal memperbarui lot AI:", e);
+  }
+}
+
+function setupAiLotToggle() {
+  const btnAiLot = document.getElementById("btnToggleAiLot");
+  const btnAiLotText = document.getElementById("btnAiLotText");
+  const lotInput = document.getElementById("quickLotInput");
+  if (!btnAiLot || !lotInput) return;
+
+  btnAiLot.addEventListener("click", () => {
+    isAiAutoLotEnabled = !isAiAutoLotEnabled;
+    window.soundFx?.playClick();
+
+    if (isAiAutoLotEnabled) {
+      btnAiLot.classList.add("active");
+      if (btnAiLotText) btnAiLotText.innerText = "⚡ AI LOT";
+      lotInput.readOnly = true;
+      lotInput.classList.add("ai-controlled");
+      updateAiRecommendedLot();
+    } else {
+      btnAiLot.classList.remove("active");
+      if (btnAiLotText) btnAiLotText.innerText = "MANUAL";
+      lotInput.readOnly = false;
+      lotInput.classList.remove("ai-controlled");
+      lotInput.title = "Masukkan besaran lot secara manual";
+    }
+  });
+}
+
 function selectSymbol(sym) {
   if (sym === appState.activeSymbol) return;
   window.soundFx?.playClick();
   loadSymbolData(sym, appState.activeTimeframe);
   renderTickerStrip();
+  updateAiRecommendedLot();
 }
 
 async function executeQuickTrade(direction) {
@@ -1500,7 +1548,8 @@ async function executeQuickTrade(direction) {
         symbol: currentSymbol,
         direction: direction,
         lot: lot,
-        strategy: "Manual Trade"
+        use_ai_lot: isAiAutoLotEnabled,
+        strategy: isAiAutoLotEnabled ? "AI Smart Lot Execution" : "Manual Trade"
       })
     });
     const data = await res.json();
