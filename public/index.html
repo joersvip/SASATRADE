@@ -26,49 +26,27 @@
       </div>
     </div>
 
-    <!-- CENTER SECTION: AI ROBOT MASTER START/STOP & MARKET CATEGORIES -->
+    <!-- CENTER SECTION: AI ROBOT MASTER START/STOP (CENTERED) -->
     <div class="navbar-center-group">
       <!-- AI Master Start/Stop Switch (Prominent Center Button) -->
       <button class="ai-master-toggle-btn paused" id="aiMasterToggle" title="Klik untuk Start / Stop Robot Trading AI (Otomatisasi Eksekusi Pasar)">
         <span class="pulse-dot" style="background:#ffb703;"></span>
         <span>ROBOT AI: STOPPED (KLIK START)</span>
       </button>
-
-      <!-- Market Category Filter -->
-      <nav class="market-nav-tabs">
-        <button class="market-tab-btn active" data-category="all" id="tabCategoryAll">
-          <span>🌐 Semua Pasar</span>
-        </button>
-        <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
-          <span>💱 Forex</span>
-        </button>
-        <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
-          <span>⚡ Crypto</span>
-        </button>
-        <button class="market-tab-btn" data-category="commodities" id="tabCategoryCommodities">
-          <span>🥇 Komoditas & Logam</span>
-        </button>
-        <button class="market-tab-btn" data-category="indices" id="tabCategoryIndices">
-          <span>📊 Indeks Saham</span>
-        </button>
-        <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
-          <span>📈 Saham Global</span>
-        </button>
-      </nav>
     </div>
 
     <!-- Account Switcher & Bot Controls -->
     <div class="nav-actions">
       <!-- Connection Status -->
-      <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text-muted);">
-        <span id="wsStatusDot" style="width:8px; height:8px; border-radius:50%; background:#ffb703; display:inline-block;"></span>
-        <span id="wsStatusText">CONNECTING</span>
+      <div style="display:flex; align-items:center; gap:5px; font-size:0.72rem; font-family:var(--font-mono); color:var(--text-muted);">
+        <span id="wsStatusDot" style="width:7px; height:7px; border-radius:50%; background:#ffb703; display:inline-block;"></span>
+        <span id="wsStatusText">LIVE</span>
       </div>
 
       <!-- Circuit Breaker Status Badge -->
       <div class="circuit-breaker-pill safe" id="navCircuitBreakerBadge" title="Status Proteksi Modal Harian (Max Drawdown 5%)">
         <span class="cb-dot"></span>
-        <span id="navCbText">CB: AKTIF (AMAN)</span>
+        <span id="navCbText">CB: AMAN</span>
       </div>
 
       <!-- Self-Learning AI Brain Badge -->
@@ -98,12 +76,12 @@
       <!-- 1-Screen Pro Mode Toggle -->
       <button class="btn-screen-mode active" id="btnToggleScreenMode" title="Beralih antara Mode 1 Layar Penuh dan Mode Bebas Scroll">
         <span id="screenModeIcon">🖥️</span>
-        <span id="screenModeText">1 Layar (Fit)</span>
+        <span id="screenModeText">1 Layar</span>
       </button>
 
       <button class="btn-connect-real" id="btnOpenConnectRealModal" title="Hubungkan Akun Broker Real (MetaTrader 5 / Crypto Exchange API)">
-        <span style="font-size:0.9rem;">🔐</span>
-        <span>Login Akun Real</span>
+        <span style="font-size:0.85rem;">🔐</span>
+        <span>Akun Real</span>
       </button>
 
       <!-- Account Profile Button -->
@@ -115,7 +93,7 @@
           </span>
           <span class="acc-balance-num" id="activeAccBalance">$0.00</span>
         </div>
-        <svg style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 20 20">
+        <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 20 20">
           <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
         </svg>
       </button>
@@ -134,18 +112,41 @@
     </div>
   </div>
 
-  <!-- MARKET TOOLBAR: SEARCH & BROKER SYNC -->
+  <!-- MARKET TOOLBAR: SEARCH, CATEGORIES & BROKER SYNC -->
   <div class="market-toolbar-strip">
     <div class="market-search-box">
       <span class="search-icon">🔍</span>
-      <input type="text" id="marketSearchInput" placeholder="Cari 350+ pasar trading (cth: XAU, US30, BTC, EUR, NVDA, OIL)..." autocomplete="off" />
+      <input type="text" id="marketSearchInput" placeholder="Cari 350+ pasar (XAU, US30, BTC, EUR)..." autocomplete="off" />
       <button class="btn-clear-search" id="btnClearSearch" style="display:none;" title="Hapus pencarian">✕</button>
     </div>
+
+    <!-- Market Category Filter Tabs (Positioned directly with markets toolbar) -->
+    <nav class="market-nav-tabs">
+      <button class="market-tab-btn active" data-category="all" id="tabCategoryAll">
+        <span>🌐 Semua Pasar</span>
+      </button>
+      <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
+        <span>💱 Forex</span>
+      </button>
+      <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
+        <span>⚡ Crypto</span>
+      </button>
+      <button class="market-tab-btn" data-category="commodities" id="tabCategoryCommodities">
+        <span>🥇 Komoditas</span>
+      </button>
+      <button class="market-tab-btn" data-category="indices" id="tabCategoryIndices">
+        <span>📊 Indeks</span>
+      </button>
+      <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
+        <span>📈 Saham</span>
+      </button>
+    </nav>
+
     <div class="market-stats-actions">
       <span class="market-counter-badge" id="marketCounterBadge"><b id="marketCountNum">356</b> Pasar Aktif</span>
       <button class="btn-sync-broker-markets" id="btnSyncBrokerMarkets" title="Sinkronkan seluruh instrumen pasar dari akun MetaTrader 5 broker">
         <span class="sync-icon">🔄</span>
-        <span>Sinkronkan Pasar Broker MT5</span>
+        <span>Sinkron MT5</span>
       </button>
     </div>
   </div>
