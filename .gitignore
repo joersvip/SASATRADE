@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data & Database aplikasi (Wajib di-ignore agar data akun/trade di server tidak tertimpa)
+data/
+logs/
+
+# Binary installer
+mt5setup.exe
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp

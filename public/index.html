@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexAI • Multi-Market Auto Trading Robot (Forex, Crypto, Saham)</title>
+  <meta name="description" content="Aplikasi Web Dashboard Interaktif Auto Trading Robot AI untuk pasar Forex, Crypto, dan Saham dengan simulasi akun demo dan multi-account profile manager.">
+  
+  <link rel="stylesheet" href="/css/style.css?v=3.0">
+</head>
+<body class="pro-fit-screen">
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">
+          <span>APEX<b>AI</b> TRADER</span>
+          <span class="brand-badge">Auto Robot v2.4</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Market Category Filter -->
+    <nav class="market-nav-tabs">
+      <button class="market-tab-btn active" data-category="all" id="tabCategoryAll">
+        <span>🌐 Semua Pasar</span>
+      </button>
+      <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
+        <span>💱 Forex & Emas</span>
+      </button>
+      <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
+        <span>⚡ Crypto</span>
+      </button>
+      <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
+        <span>📈 Saham</span>
+      </button>
+    </nav>
+
+    <!-- Account Switcher & Bot Controls -->
+    <div class="nav-actions">
+      <!-- Connection Status -->
+      <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; font-family:var(--font-mono); color:var(--text-muted);">
+        <span id="wsStatusDot" style="width:8px; height:8px; border-radius:50%; background:#ffb703; display:inline-block;"></span>
+        <span id="wsStatusText">CONNECTING</span>
+      </div>
+
+      <!-- Circuit Breaker Status Badge -->
+      <div class="circuit-breaker-pill safe" id="navCircuitBreakerBadge" title="Status Proteksi Modal Harian (Max Drawdown 5%)">
+        <span class="cb-dot"></span>
+        <span id="navCbText">CB: AKTIF (AMAN)</span>
+      </div>
+
+      <!-- Self-Learning AI Brain Badge -->
+      <div class="ai-brain-pill" id="navAiBrainBadge" title="Status Otak AI: Berkembang otomatis dalam setiap analisis trade">
+        <span class="brain-sparkle">🧠</span>
+        <span id="navBrainLevelText">AI: LVL 1</span>
+        <span class="brain-xp-tag" id="navBrainXpTag">0 XP</span>
+      </div>
+
+      <!-- Live Digital Clock Widget -->
+      <div class="live-clock-card" id="liveClockWidget" title="Jam Digital Real-time & Waktu Pasar Global (UTC)">
+        <svg class="clock-icon" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+        <div class="clock-info">
+          <div class="clock-time-line">
+            <span class="clock-time-digits" id="clockTimeDigits">00:00:00</span>
+            <span class="clock-tz-badge" id="clockTzBadge">WIB</span>
+          </div>
+          <div class="clock-sub-line">
+            <span id="clockDateText">-- --- ----</span>
+            <span style="opacity:0.4;">|</span>
+            <span id="clockUtcText">UTC --:--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Account Login Button -->
+      <!-- 1-Screen Pro Mode Toggle -->
+      <button class="btn-screen-mode active" id="btnToggleScreenMode" title="Beralih antara Mode 1 Layar Penuh dan Mode Bebas Scroll">
+        <span id="screenModeIcon">🖥️</span>
+        <span id="screenModeText">1 Layar (Fit)</span>
+      </button>
+
+      <button class="btn-connect-real" id="btnOpenConnectRealModal" title="Hubungkan Akun Broker Real (MetaTrader 5 / Crypto Exchange API)">
+        <span style="font-size:0.9rem;">🔐</span>
+        <span>Login Akun Real</span>
+      </button>
+
+      <!-- Account Profile Button -->
+      <button class="account-selector-btn" id="accountSelectorBtn" title="Klik untuk berganti akun atau tambah akun baru">
+        <div class="account-badge-pill">
+          <span class="acc-title">
+            <span id="activeAccName">Memuat Akun...</span>
+            <span class="acc-type-tag" id="activeAccType">DEMO</span>
+          </span>
+          <span class="acc-balance-num" id="activeAccBalance">$0.00</span>
+        </div>
+        <svg style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 20 20">
+          <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+        </svg>
+      </button>
+
+      <!-- AI Master Switch -->
+      <button class="ai-master-toggle-btn paused" id="aiMasterToggle">
+        <span class="pulse-dot" style="background:#64748b;"></span>
+        <span>ROBOT AI: PAUSED</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CIRCUIT BREAKER EMERGENCY ALERT BANNER -->
+  <div class="circuit-breaker-banner" id="circuitBreakerBanner" style="display:none;">
+    <div class="cb-banner-content">
+      <span class="cb-banner-icon">🚨</span>
+      <div class="cb-banner-text">
+        <b>CIRCUIT BREAKER TERPICU (MAX LOSS HARIAN 5% TERCAPAI):</b>
+        <span id="cbBannerReason">Robot telah menghentikan seluruh perdagangan dan melikuidasi posisi terbuka demi melindungi modal Anda.</span>
+      </div>
+      <button class="btn-reset-cb" id="btnResetCircuitBreaker">Buka Kunci (Reset Manual)</button>
+    </div>
+  </div>
+
+  <!-- REALTIME TICKER STRIP -->
+  <section class="ticker-strip" id="tickerStrip">
+    <!-- Diisi otomatis oleh JavaScript -->
+  </section>
+
+  <!-- MAIN DASHBOARD -->
+  <main class="main-dashboard">
+
+    <!-- LEFT / CENTER: WORKSPACE COLUMN (CHART + DOCKED BOTTOM TABS) -->
+    <div class="left-workspace-column">
+      <!-- INTERACTIVE CHART -->
+      <section class="chart-container-card">
+      <div class="chart-header">
+        <div class="chart-title-area">
+          <span class="active-symbol-badge" id="headerSymbolBadge">EURUSD</span>
+          <span style="font-size:0.85rem; color:var(--text-secondary)" id="headerSymbolName">Euro / US Dollar</span>
+          <div class="active-price-info">
+            <span class="live-bid-ask">Bid: <b id="headerLiveBid" style="color:var(--text-primary)">-</b></span>
+            <span class="live-bid-ask">Ask: <b id="headerLiveAsk" style="color:var(--text-primary)">-</b></span>
+            <span class="live-bid-ask" style="color:var(--neon-cyan)" id="headerSpread">Spread: -</span>
+          </div>
+        </div>
+
+        <div class="chart-header-controls">
+          <!-- Multi-Chart Layout Switcher -->
+          <div class="chart-layout-switcher" id="chartLayoutSwitcher" title="Format Layout Multi-Chart">
+            <span class="layout-label">Grid:</span>
+            <button class="layout-btn active" data-layout="1" id="btnLayout1" title="1 Chart Tunggal (Fokus)">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              <span>1x1</span>
+            </button>
+            <button class="layout-btn" data-layout="2" id="btnLayout2" title="2 Chart Bersebelahan (Dual Split)">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><rect x="1.5" y="2" width="5.5" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="9" y="2" width="5.5" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span>2x1</span>
+            </button>
+            <button class="layout-btn" data-layout="4" id="btnLayout4" title="4 Chart Kisi (Quad Grid 2x2)">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+              <span>2x2</span>
+            </button>
+          </div>
+
+          <!-- Timeframe Selectors -->
+          <div class="timeframe-group" id="headerTimeframeGroup">
+            <button class="tf-btn" data-tf="1m">1m</button>
+            <button class="tf-btn" data-tf="5m">5m</button>
+            <button class="tf-btn active" data-tf="15m">15m</button>
+            <button class="tf-btn" data-tf="1h">1H</button>
+            <button class="tf-btn" data-tf="1D">1D</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Chart Container Grid -->
+      <div class="multi-chart-grid layout-1" id="multiChartGrid">
+        <!-- Slot 0 -->
+        <div class="subchart-card active-focus" id="chartSlot0" data-slot="0">
+          <div class="subchart-header">
+            <div class="subchart-title-area">
+              <span class="subchart-slot-badge">CHART 1</span>
+              <select class="subchart-symbol-select" id="slotSymbolSelect0" data-slot="0">
+                <!-- Diisi otomatis oleh JavaScript -->
+              </select>
+              <div class="subchart-price-info">
+                <span class="subchart-price" id="slotPrice0">-</span>
+                <span class="subchart-change" id="slotChange0">-</span>
+              </div>
+            </div>
+            <div class="subchart-tf-group" data-slot="0">
+              <button class="sub-tf-btn" data-tf="1m">1m</button>
+              <button class="sub-tf-btn" data-tf="5m">5m</button>
+              <button class="sub-tf-btn active" data-tf="15m">15m</button>
+              <button class="sub-tf-btn" data-tf="1h">1H</button>
+              <button class="sub-tf-btn" data-tf="1D">1D</button>
+            </div>
+          </div>
+          <div class="subchart-canvas-wrapper">
+            <div class="chart-tooltip-bar" id="chartTooltip0">
+              <span>Arahkan kursor pada candlestick untuk melihat data OHLCV</span>
+            </div>
+            <canvas id="chartCanvas0"></canvas>
+          </div>
+        </div>
+
+        <!-- Slot 1 -->
+        <div class="subchart-card" id="chartSlot1" data-slot="1" style="display:none;">
+          <div class="subchart-header">
+            <div class="subchart-title-area">
+              <span class="subchart-slot-badge">CHART 2</span>
+              <select class="subchart-symbol-select" id="slotSymbolSelect1" data-slot="1">
+                <!-- Diisi otomatis oleh JavaScript -->
+              </select>
+              <div class="subchart-price-info">
+                <span class="subchart-price" id="slotPrice1">-</span>
+                <span class="subchart-change" id="slotChange1">-</span>
+              </div>
+            </div>
+            <div class="subchart-tf-group" data-slot="1">
+              <button class="sub-tf-btn" data-tf="1m">1m</button>
+              <button class="sub-tf-btn" data-tf="5m">5m</button>
+              <button class="sub-tf-btn active" data-tf="15m">15m</button>
+              <button class="sub-tf-btn" data-tf="1h">1H</button>
+              <button class="sub-tf-btn" data-tf="1D">1D</button>
+            </div>
+          </div>
+          <div class="subchart-canvas-wrapper">
+            <div class="chart-tooltip-bar" id="chartTooltip1">
+              <span>Arahkan kursor pada candlestick untuk melihat data OHLCV</span>
+            </div>
+            <canvas id="chartCanvas1"></canvas>
+          </div>
+        </div>
+
+        <!-- Slot 2 -->
+        <div class="subchart-card" id="chartSlot2" data-slot="2" style="display:none;">
+          <div class="subchart-header">
+            <div class="subchart-title-area">
+              <span class="subchart-slot-badge">CHART 3</span>
+              <select class="subchart-symbol-select" id="slotSymbolSelect2" data-slot="2">
+                <!-- Diisi otomatis oleh JavaScript -->
+              </select>
+              <div class="subchart-price-info">
+                <span class="subchart-price" id="slotPrice2">-</span>
+                <span class="subchart-change" id="slotChange2">-</span>
+              </div>
+            </div>
+            <div class="subchart-tf-group" data-slot="2">
+              <button class="sub-tf-btn" data-tf="1m">1m</button>
+              <button class="sub-tf-btn" data-tf="5m">5m</button>
+              <button class="sub-tf-btn active" data-tf="15m">15m</button>
+              <button class="sub-tf-btn" data-tf="1h">1H</button>
+              <button class="sub-tf-btn" data-tf="1D">1D</button>
+            </div>
+          </div>
+          <div class="subchart-canvas-wrapper">
+            <div class="chart-tooltip-bar" id="chartTooltip2">
+              <span>Arahkan kursor pada candlestick untuk melihat data OHLCV</span>
+            </div>
+            <canvas id="chartCanvas2"></canvas>
+          </div>
+        </div>
+
+        <!-- Slot 3 -->
+        <div class="subchart-card" id="chartSlot3" data-slot="3" style="display:none;">
+          <div class="subchart-header">
+            <div class="subchart-title-area">
+              <span class="subchart-slot-badge">CHART 4</span>
+              <select class="subchart-symbol-select" id="slotSymbolSelect3" data-slot="3">
+                <!-- Diisi otomatis oleh JavaScript -->
+              </select>
+              <div class="subchart-price-info">
+                <span class="subchart-price" id="slotPrice3">-</span>
+                <span class="subchart-change" id="slotChange3">-</span>
+              </div>
+            </div>
+            <div class="subchart-tf-group" data-slot="3">
+              <button class="sub-tf-btn" data-tf="1m">1m</button>
+              <button class="sub-tf-btn" data-tf="5m">5m</button>
+              <button class="sub-tf-btn active" data-tf="15m">15m</button>
+              <button class="sub-tf-btn" data-tf="1h">1H</button>
+              <button class="sub-tf-btn" data-tf="1D">1D</button>
+            </div>
+          </div>
+          <div class="subchart-canvas-wrapper">
+            <div class="chart-tooltip-bar" id="chartTooltip3">
+              <span>Arahkan kursor pada candlestick untuk melihat data OHLCV</span>
+            </div>
+            <canvas id="chartCanvas3"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Order Execution Bar -->
+      <div class="quick-order-bar">
+        <div class="order-inputs">
+          <div class="input-label-wrap">
+            <span>Lot / Kontrak:</span>
+            <input type="number" id="quickLotInput" class="order-input" value="0.10" step="0.01" min="0.01">
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">
+            Auto SL & TP dihitung cerdas oleh proteksi risiko
+          </div>
+        </div>
+
+        <div class="order-buttons-group">
+          <button class="btn-sell" id="quickSellBtn">
+            <span>INSTANT SELL</span>
+            <span class="btn-sub-price" id="quickSellPrice">@ 1.08640</span>
+          </button>
+          <button class="btn-buy" id="quickBuyBtn">
+            <span>INSTANT BUY</span>
+            <span class="btn-sub-price" id="quickBuyPrice">@ 1.08652</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+      <!-- BOTTOM TABBED WORKSPACE: POSITIONS, HISTORY, ANALYTICS, LOGS -->
+  <section class="bottom-workspace-card">
+    <div class="bottom-tab-header">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-target="panePositions" id="tabBtnPositions">
+          <span>Posisi Terbuka</span>
+          <span class="tab-counter" id="positionsCounter">0</span>
+        </button>
+        <button class="tab-btn" data-target="paneHistory" id="tabBtnHistory">
+          <span>Riwayat Transaksi</span>
+          <span class="tab-counter" id="historyCounter">0</span>
+        </button>
+        <button class="tab-btn" data-target="paneAnalytics" id="tabBtnAnalytics">
+          <span>Performa Robot & Win-Rate</span>
+        </button>
+        <button class="tab-btn" data-target="paneBacktest" id="tabBtnBacktest">
+          <span>🔬 Backtest Lab AI</span>
+        </button>
+        <button class="tab-btn" data-target="paneLogs" id="tabBtnLogs">
+          <span>System Console</span>
+        </button>
+      </div>
+
+      <div class="tab-actions">
+        <button class="btn-close-all" id="closeAllBtn">Tutup Semua Posisi</button>
+        <button class="btn-kill-switch" id="killSwitchBtn" title="Darurat: Likuidasi instan semua posisi & matikan AI Robot sekarang!">🛑 EMERGENCY KILL-SWITCH</button>
+      </div>
+    </div>
+
+    <!-- PANE 1: OPEN POSITIONS -->
+    <div class="tab-content-pane" id="panePositions" style="display:block;">
+      <div class="table-responsive">
+        <table class="trading-table">
+          <thead>
+            <tr>
+              <th>Tipe</th>
+              <th>Simbol</th>
+              <th>Order</th>
+              <th>Lot</th>
+              <th>Entry Price</th>
+              <th>Live Price</th>
+              <th>Stop Loss</th>
+              <th>Take Profit</th>
+              <th>Floating PnL</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="positionsTableBody">
+            <!-- Diisi JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANE 2: HISTORY -->
+    <div class="tab-content-pane" id="paneHistory" style="display:none;">
+      <div class="table-responsive">
+        <table class="trading-table">
+          <thead>
+            <tr>
+              <th>Tipe</th>
+              <th>Simbol</th>
+              <th>Order</th>
+              <th>Lot</th>
+              <th>Harga Beli</th>
+              <th>Harga Jual</th>
+              <th>Profit/Loss</th>
+              <th>Penyebab Tutup</th>
+              <th>Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Diisi JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANE 3: ANALYTICS & EQUITY CURVE -->
+    <div class="tab-content-pane" id="paneAnalytics" style="display:none;">
+      <div class="analytics-container">
+        <div class="analytics-stat-card">
+          <div class="metric-item">
+            <div class="metric-label">Win Rate Robot AI</div>
+            <div class="metric-value up" id="statWinRate">0.0%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Total Keuntungan Bersih (Net PnL)</div>
+            <div class="metric-value up" id="statTotalPnl">$0.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Profit Factor</div>
+            <div class="metric-value" id="statProfitFactor">0.0</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Maksimum Drawdown</div>
+            <div class="metric-value down" id="statMaxDrawdown">0.0%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Rasio Menang / Kalah</div>
+            <div class="metric-value" id="statTotalTrades" style="font-size:0.85rem;">0W / 0L</div>
+          </div>
+        </div>
+
+        <div class="equity-curve-wrapper">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.85rem; font-weight:700;">Kurva Pertumbuhan Modal (Equity Curve)</span>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Realtime Balance Tracking</span>
+          </div>
+          <canvas id="equityChart"></canvas>
+        </div>
+
+        <!-- SELF-LEARNING AI ADAPTATION MATRIX -->
+        <div class="learning-matrix-card">
+          <div class="learning-matrix-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.4rem;">🧠</span>
+              <div>
+                <div style="font-size:0.92rem; font-weight:800; color:var(--neon-cyan);">Self-Learning Brain & Adaptive Memory Journal</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">Otak AI beradaptasi otomatis: memperkuat bobot strategi profit dan memperketat filter saat loss</div>
+              </div>
+            </div>
+            <div class="brain-level-badge-large">
+              <span id="statBrainLevel">Level 1</span>
+              <span class="xp-progress-sub" id="statBrainXp">XP: 0 / 100</span>
+            </div>
+          </div>
+
+          <div class="learning-grid">
+            <!-- Strategy Weights -->
+            <div class="learning-subcard">
+              <div class="subcard-title">⚖️ Bobot Adaptif Strategi AI (Dynamic Weighting)</div>
+              <div class="weights-list" id="aiStrategyWeightsList">
+                <!-- Diisi JavaScript -->
+              </div>
+            </div>
+
+            <!-- Learned Insights Log -->
+            <div class="learning-subcard">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div class="subcard-title" style="margin:0;">📝 Catatan Evaluasi & Refleksi Belajar AI</div>
+                <button class="btn-xs-reset" id="btnResetAiMemory" title="Reset memori AI ke baseline bawaan">Reset Memori</button>
+              </div>
+              <div class="insights-terminal" id="aiInsightsTerminal">
+                <!-- Diisi JavaScript -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PANE 4: SYSTEM LOGS -->
+    <div class="tab-content-pane" id="paneLogs" style="display:none;">
+      <div class="system-log-terminal" id="systemLogsTerminal">
+        <!-- Diisi JavaScript -->
+      </div>
+    </div>
+
+    <!-- PANE 5: BACKTEST LABORATORIUM -->
+    <div class="tab-content-pane" id="paneBacktest" style="display:none;">
+      <div class="backtest-layout">
+        <div class="backtest-sidebar">
+          <div class="bt-sidebar-title">⚙️ Parameter Simulasi AI</div>
+          <form id="backtestForm" class="bt-form">
+            <div class="form-group">
+              <label class="form-label" for="btSymbol">Aset Pasar:</label>
+              <select id="btSymbol" class="select-control">
+                <option value="EURUSD">EURUSD (Forex)</option>
+                <option value="GBPUSD">GBPUSD (Forex)</option>
+                <option value="XAUUSD">XAUUSD (Gold Emas)</option>
+                <option value="BTCUSDT" selected>BTCUSDT (Crypto)</option>
+                <option value="ETHUSDT">ETHUSDT (Crypto)</option>
+                <option value="SOLUSDT">SOLUSDT (Crypto)</option>
+                <option value="AAPL">AAPL (Apple Saham)</option>
+                <option value="NVDA">NVDA (NVIDIA Saham)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="btStrategy">Strategi AI:</label>
+              <select id="btStrategy" class="select-control">
+                <option value="scalping">Multi-Timeframe Scalper (M15 + H1 Confluence)</option>
+                <option value="reversal">RSI Mean Reversion + Stochastic</option>
+                <option value="breakout">Momentum Volatility Breakout (Bollinger + ATR)</option>
+              </select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <div class="form-group">
+                <label class="form-label" for="btInitialBalance">Modal Awal ($):</label>
+                <input type="number" id="btInitialBalance" class="form-input" value="10000" min="100" step="100" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="btRiskPct">Risk/Trade (%):</label>
+                <input type="number" id="btRiskPct" class="form-input" value="1.0" min="0.1" max="10" step="0.1" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="form-label" for="btConfidence" style="margin:0;">Min. Confidence AI:</label>
+                <span id="btConfidenceVal" style="color:var(--neon-green); font-weight:700; font-family:var(--font-mono); font-size:0.8rem;">65%</span>
+              </div>
+              <input type="range" id="btConfidence" min="50" max="95" value="65" style="width:100%;">
+              <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted);">
+                <span>Agresif (50%)</span>
+                <span>Ketat (95%)</span>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit-form" id="btnRunBacktest" style="background:linear-gradient(135deg, #00f090, #00b4d8); color:#030712; font-weight:800; padding:10px; cursor:pointer;">
+              ⚡ Mulai Simulasi Backtest
+            </button>
+          </form>
+        </div>
+
+        <div class="backtest-results-area">
+          <div class="backtest-metrics-grid">
+            <div class="bt-stat-card">
+              <span class="bt-stat-label">Win Rate AI</span>
+              <span class="bt-stat-val up" id="btWinRate">-</span>
+            </div>
+            <div class="bt-stat-card">
+              <span class="bt-stat-label">Net Profit ($)</span>
+              <span class="bt-stat-val" id="btNetProfit">-</span>
+            </div>
+            <div class="bt-stat-card">
+              <span class="bt-stat-label">Profit Factor</span>
+              <span class="bt-stat-val" id="btProfitFactor">-</span>
+            </div>
+            <div class="bt-stat-card">
+              <span class="bt-stat-label">Maks. Drawdown</span>
+              <span class="bt-stat-val down" id="btMaxDrawdown">-</span>
+            </div>
+            <div class="bt-stat-card">
+              <span class="bt-stat-label">Total Trade</span>
+              <span class="bt-stat-val" id="btTotalTrades">-</span>
+            </div>
+          </div>
+
+          <div class="bt-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);">Kurva Pertumbuhan Modal Simulasi (Equity Curve)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);" id="btResultSummary">Siap menjalankan pengujian histori</span>
+            </div>
+            <div style="height:170px; position:relative;">
+              <canvas id="backtestEquityChart" style="width:100%; height:100%; display:block;"></canvas>
+            </div>
+          </div>
+
+          <div class="table-responsive" style="max-height:160px; overflow-y:auto; margin-top:8px;">
+            <table class="trading-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Tipe</th>
+                  <th>Waktu Entry</th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th>PnL ($)</th>
+                  <th>Return (%)</th>
+                  <th>Alasan Exit</th>
+                </tr>
+              </thead>
+              <tbody id="backtestTableBody">
+                <tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:16px;">Klik "Mulai Simulasi Backtest" untuk memproses data histori dan menguji strategi.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+    </div>
+
+    <!-- RIGHT: AI BOT CONTROL & REASONING TERMINAL -->
+    <aside class="sidebar-controls">
+
+      <!-- AI Robot Configuration Widget -->
+      <div class="panel-card">
+        <div class="panel-card-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 012 2v1h4a2 2 0 012 2v3a2 2 0 01-2 2h-1v4a2 2 0 01-2 2h-1v1a2 2 0 01-4 0v-1H9a2 2 0 01-2-2v-4H6a2 2 0 01-2-2V7a2 2 0 012-2h4V4a2 2 0 012-2zm-3 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm6 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+            <span>AI Trading Engine</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="btn-ai-cfg" id="openAIConfigBtn" title="Konfigurasi API Key & URL Endpoint AI">
+              <svg style="width:13px; height:13px; fill:currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+              <span>API & URL</span>
+            </button>
+            <div class="ai-status-indicator paused" id="aiStatusPill">
+              <span class="pulse-dot" style="background:#ffb703;"></span> NONAKTIF
+            </div>
+          </div>
+        </div>
+
+        <!-- Brain Source Info Pill -->
+        <div class="ai-brain-badge-bar" id="aiBrainBadgeBar">
+          <span style="color:var(--text-muted); font-size:0.72rem;">Otak AI:</span>
+          <span id="aiActiveModelBadge" style="color:var(--neon-cyan); font-weight:700; font-size:0.75rem;">Algoritma Lokal (Built-in)</span>
+          <span id="aiActiveProviderBadge" class="acc-type-tag" style="margin-left:auto; font-size:0.65rem;">HEURISTIC</span>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label" for="aiStrategySelect">Strategi AI Aktif:</label>
+          <select id="aiStrategySelect" class="select-control">
+            <!-- Diisi JavaScript -->
+          </select>
+        </div>
+
+        <div class="control-field">
+          <div class="control-label">
+            <span>Batas Keyakinan Sinyal (Confidence):</span>
+            <span class="slider-val" id="aiConfidenceVal">75%</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="aiConfidenceSlider" class="range-slider" min="60" max="95" value="75">
+          </div>
+        </div>
+
+        <div class="control-field">
+          <label class="control-label" for="aiRiskInput">Alokasi Risiko per Trade (% Modal):</label>
+          <input type="number" id="aiRiskInput" class="select-control" value="2.0" step="0.5" min="0.5" max="10">
+        </div>
+
+        <button class="btn-scan-now" id="aiScanNowBtn">
+          ⚡ Pindai Pasar Sekarang (Force Scan)
+        </button>
+      </div>
+
+      <!-- AI Signal & Reasoning Feed -->
+      <div class="panel-card">
+        <div class="panel-card-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <span>Logika Keputusan AI</span>
+          </div>
+        </div>
+
+        <div class="ai-reasoning-terminal" id="aiSignalsTerminal">
+          <!-- Diisi JavaScript -->
+        </div>
+      </div>
+
+      <!-- Account Summary Widget -->
+      <div class="panel-card">
+        <div class="panel-card-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+            <span>Finansial Akun</span>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">Balance</div>
+            <div class="metric-value" id="metricBalance">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Equity</div>
+            <div class="metric-value" id="metricEquity">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Used Margin</div>
+            <div class="metric-value" id="metricMargin">$0.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Free Margin</div>
+            <div class="metric-value" id="metricFreeMargin">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Margin Level</div>
+            <div class="metric-value" id="metricMarginLevel">0.0%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Leverage</div>
+            <div class="metric-value" id="metricLeverage">1:100</div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- MODAL: ACCOUNT SWITCHER & PROFILE MANAGER -->
+  <div class="modal-overlay" id="accountModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Kelola & Ganti Akun Trading</div>
+        <button class="btn-close-modal" id="closeAccountModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <div style="font-size:0.85rem; color:var(--text-secondary);">
+          Pilih akun aktif yang ingin digunakan atau buat profil akun Demo / Broker baru:
+        </div>
+
+        <!-- Existing Accounts List -->
+        <div class="account-list-modal" id="modalAccountList">
+          <!-- Diisi JavaScript -->
+        </div>
+
+        <hr style="border-color:var(--border-subtle); margin:8px 0;">
+
+        <!-- Form Create New Account -->
+        <div>
+          <div style="font-weight:700; font-size:0.95rem; margin-bottom:12px;">+ Tambah Profil Akun Baru</div>
+          <form id="newAccountForm" style="display:flex; flex-direction:column; gap:12px;">
+            <div class="form-group">
+              <label class="form-label" for="newAccName">Nama Akun:</label>
+              <input type="text" id="newAccName" class="form-input" placeholder="Contoh: Demo Tantangan $50k" required>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label class="form-label" for="newAccType">Tipe Akun:</label>
+                <select id="newAccType" class="select-control">
+                  <option value="demo">Demo (Paper Trading)</option>
+                  <option value="mt5">MetaTrader 5 (Bridge)</option>
+                  <option value="crypto_api">Crypto Exchange API</option>
+                  <option value="stock_broker">Stock Broker</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newAccBalance">Saldo Awal ($):</label>
+                <input type="number" id="newAccBalance" class="form-input" value="10000" step="1000" min="100">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="newAccLeverage">Leverage:</label>
+              <select id="newAccLeverage" class="select-control">
+                <option value="50">1:50</option>
+                <option value="100" selected>1:100 (Standar)</option>
+                <option value="200">1:200</option>
+                <option value="500">1:500 (Agresif)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-submit-form">Simpan & Aktifkan Akun</button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MODIFY SL/TP -->
+  <div class="modal-overlay" id="modifyModal">
+    <div class="modal-card" style="max-width:400px;">
+      <div class="modal-header">
+        <div class="modal-title">Ubah Stop Loss & Take Profit</div>
+        <button class="btn-close-modal" id="closeModifyModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.85rem; color:var(--text-secondary);">
+          Simbol: <b id="modifyPosSym" style="color:var(--neon-cyan)"></b>
+        </div>
+        <form id="modifyOrderForm" style="display:flex; flex-direction:column; gap:12px;">
+          <input type="hidden" id="modifyPosId">
+          <div class="form-group">
+            <label class="form-label" for="modifySL">Stop Loss (Harga):</label>
+            <input type="number" id="modifySL" class="form-input" step="any" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modifyTP">Take Profit (Harga):</label>
+            <input type="number" id="modifyTP" class="form-input" step="any" required>
+          </div>
+          <button type="submit" class="btn-submit-form">Update Proteksi Posisi</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AI API KEY & URL CONFIGURATION -->
+  <div class="modal-overlay" id="aiConfigModal">
+    <div class="modal-card" style="max-width: 530px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+          <svg style="width:20px; height:20px; fill:var(--neon-cyan)" viewBox="0 0 24 24"><path d="M12 2a2 2 0 012 2v1h4a2 2 0 012 2v3a2 2 0 01-2 2h-1v4a2 2 0 01-2 2h-1v1a2 2 0 01-4 0v-1H9a2 2 0 01-2-2v-4H6a2 2 0 01-2-2V7a2 2 0 012-2h4V4a2 2 0 012-2zm-3 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm6 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
+          <span>Konfigurasi API & URL Model AI</span>
+        </div>
+        <button class="btn-close-modal" id="closeAIConfigModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+          Hubungkan Robot Trading dengan model AI favorit Anda (Google Gemini, OpenAI, DeepSeek, Ollama lokal, atau Custom Endpoint) untuk analisa teknikal dan penalaran pasar yang lebih mendalam.
+        </div>
+
+        <form id="aiConfigForm" style="display:flex; flex-direction:column; gap:12px;">
+          
+          <div class="form-group">
+            <label class="form-label" for="cfgAIProvider">Penyedia AI (Provider Preset):</label>
+            <select id="cfgAIProvider" class="select-control">
+              <option value="openai">OpenAI (ChatGPT / GPT-4o)</option>
+              <option value="gemini">Google Gemini API (Gemini 1.5 / 2.0)</option>
+              <option value="deepseek">DeepSeek AI (DeepSeek-Chat)</option>
+              <option value="groq">Groq LPU (Llama 3.3)</option>
+              <option value="ollama">Ollama (Localhost / Komputer Sendiri)</option>
+              <option value="custom">Custom API Endpoint (OpenAI Format)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgAIUrl">URL Endpoint / Base URL AI:</label>
+            <input type="text" id="cfgAIUrl" class="form-input" placeholder="https://api.openai.com/v1" required>
+            <span style="font-size:0.7rem; color:var(--text-muted);" id="cfgAIUrlHint">
+              Contoh: https://api.openai.com/v1 atau https://generativelanguage.googleapis.com/v1beta
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgAIApiKey">API Key AI:</label>
+            <div style="display:flex; gap:8px;">
+              <input type="password" id="cfgAIApiKey" class="form-input" placeholder="Masukkan API Key (sk-... atau AIza...)" style="flex:1;">
+              <button type="button" id="btnToggleApiKeyVis" class="btn-reset-acc" style="color:var(--text-primary); font-size:0.72rem; padding:6px 10px;">Tampilkan</button>
+            </div>
+            <span style="font-size:0.7rem; color:var(--neon-green);" id="cfgAIDocLink">
+              Dapatkan API Key di platform penyedia AI Anda.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfgAIModel">Model ID / Nama Model:</label>
+            <input type="text" id="cfgAIModel" class="form-input" placeholder="gpt-4o-mini" required>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.02); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-subtle);">
+            <input type="checkbox" id="cfgAIEnabled" style="width:16px; height:16px; cursor:pointer;">
+            <label for="cfgAIEnabled" style="font-size:0.82rem; font-weight:600; cursor:pointer;">
+              Gunakan Cloud / Local LLM ini sebagai Otak Analisa AI Robot
+            </label>
+          </div>
+
+          <!-- Test Connection Status Box -->
+          <div id="aiTestResultBox" style="display:none; padding:10px 12px; border-radius:var(--radius-sm); font-size:0.78rem; font-family:var(--font-mono);">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;">
+            <button type="button" id="btnTestAIConnection" class="btn-reset-acc" style="padding:10px; font-weight:700; color:var(--neon-cyan); border-color:rgba(0,242,254,0.4);">
+              ⚡ Uji Koneksi API
+            </button>
+            <button type="submit" class="btn-submit-form" style="margin-top:0;">
+              💾 Simpan Pengaturan
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGIN & CONNECT REAL BROKER ACCOUNT -->
+  <div class="modal-overlay" id="connectRealModal">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.2rem;">🔐</span>
+          <span>Login & Hubungkan Akun Real</span>
+        </div>
+        <button class="btn-close-modal" id="closeConnectRealModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+          Pilih platform broker Anda di bawah untuk mengaktifkan mode eksekusi trading dengan modal nyata:
+        </div>
+
+        <!-- Platform Tabs -->
+        <div class="market-nav-tabs" style="display:grid; grid-template-columns:1fr 1fr; margin-bottom:4px;">
+          <button type="button" class="market-tab-btn active" id="tabRealPlatformMT5" onclick="selectRealPlatform('mt5')">
+            <span>📊 MetaTrader 5 (Forex/Gold)</span>
+          </button>
+          <button type="button" class="market-tab-btn" id="tabRealPlatformCrypto" onclick="selectRealPlatform('crypto')">
+            <span>⚡ Crypto Exchange API</span>
+          </button>
+        </div>
+
+        <!-- Form Real MT5 -->
+        <div style="background:linear-gradient(135deg, rgba(0,240,144,0.12), rgba(0,180,216,0.12)); border:1.5px solid rgba(0,240,144,0.4); border-radius:var(--radius-md); padding:14px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-weight:700; color:#00f090; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+              <span>⚡</span>
+              <span>Sinkronisasi Otomatis Terminal MT5 Exness</span>
+            </div>
+            <span class="tag-badge" style="background:#00f090; color:#030712; font-weight:800; font-size:0.65rem;">REKOMENDASI</span>
+          </div>
+          <div style="font-size:0.76rem; color:var(--text-secondary); line-height:1.4;">
+            Jika terminal MetaTrader 5 (Exness) Anda sudah login di komputer ini, Anda tidak perlu mengetik ulang password. Klik tombol di bawah untuk langsung menyinkronkan nomor login, server, saldo riil, dan posisi trading.
+          </div>
+          <button type="button" id="btnAutoSyncMT5" onclick="autoSyncActiveMT5Terminal()" class="btn-submit-form" style="background:linear-gradient(135deg, #00f090, #00b4d8); color:#030712; font-weight:800; padding:10px; margin-top:4px;">
+            ⚡ Sinkronkan Akun Exness yang Aktif di MT5
+          </button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin:2px 0;">
+          <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+          <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">atau hubungkan via kredensial manual</span>
+          <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+        </div>
+
+        <form id="realMT5Form" style="display:flex; flex-direction:column; gap:12px;">
+          <div class="form-group">
+            <label class="form-label" for="realMT5Name">Nama Akun Profil:</label>
+            <input type="text" id="realMT5Name" class="form-input" placeholder="Contoh: Exness Real Forex" required>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+              <label class="form-label" for="realMT5Broker">Broker:</label>
+              <select id="realMT5Broker" class="select-control" onchange="onBrokerPresetChange(this.value)">
+                <option value="Exness" selected>Exness</option>
+                <option value="IC Markets">IC Markets</option>
+                <option value="XM Global">XM Global</option>
+                <option value="OctaFX">OctaFX</option>
+                <option value="FBS">FBS</option>
+                <option value="MetaQuotes">MetaQuotes (Demo/Live)</option>
+                <option value="Custom">Broker Lainnya (Kustom)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="realMT5Server">Nama Server Broker:</label>
+              <input type="text" id="realMT5Server" class="form-input" list="exnessServerList" placeholder="Contoh: Exness-MT5Trial7 / Exness-MT5Real" required>
+              <datalist id="exnessServerList">
+                <option value="Exness-MT5Trial7">
+                <option value="Exness-MT5Trial">
+                <option value="Exness-MT5Real">
+                <option value="Exness-MT5Real2">
+                <option value="Exness-MT5Real3">
+                <option value="Exness-MT5Real4">
+                <option value="Exness-MT5Real5">
+              </datalist>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+              <label class="form-label" for="realMT5Login">Nomor Akun / Login ID MT5:</label>
+
+              <input type="number" id="realMT5Login" class="form-input" placeholder="Contoh: 5082194" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="realMT5Password">Password Trading:</label>
+              <div style="display:flex; gap:6px;">
+                <input type="password" id="realMT5Password" class="form-input" placeholder="Password MT5" style="flex:1;" required>
+                <button type="button" id="btnToggleMT5Pass" class="btn-reset-acc" style="font-size:0.7rem; padding:6px 8px; color:var(--text-primary);">Lihat</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+              <label class="form-label" for="realMT5Balance">Saldo Akun Real ($ USD):</label>
+              <input type="number" id="realMT5Balance" class="form-input" value="1000" step="50" min="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="realMT5Leverage">Leverage:</label>
+              <select id="realMT5Leverage" class="select-control">
+                <option value="50">1:50</option>
+                <option value="100" selected>1:100 (Disarankan)</option>
+                <option value="200">1:200</option>
+                <option value="500">1:500</option>
+                <option value="1000">1:1000</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,183,3,0.08); border:1px solid rgba(255,183,3,0.3); padding:10px 12px; border-radius:var(--radius-sm); font-size:0.75rem; color:var(--neon-amber); line-height:1.4;">
+            💡 <b>Tips MT5:</b> Pastikan MetaTrader 5 sudah terinstal dari <code>mt5setup.exe</code> dan menu <i>Tools ➔ Options ➔ Expert Advisors ➔ Allow Automated Trading</i> sudah dicentang.
+          </div>
+
+          <button type="submit" class="btn-submit-form" style="background:linear-gradient(135deg, #ffb703, #ff8800); color:#030712; font-weight:800; padding:12px;">
+            🚀 Login & Aktifkan Akun Real MT5
+          </button>
+        </form>
+
+        <!-- Form Real Crypto -->
+        <form id="realCryptoForm" style="display:none; flex-direction:column; gap:12px;">
+          <div class="form-group">
+            <label class="form-label" for="realCryptoName">Nama Akun Profil:</label>
+            <input type="text" id="realCryptoName" class="form-input" placeholder="Contoh: Binance Futures Real" required>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+              <label class="form-label" for="realCryptoExchange">Pilihan Exchange:</label>
+              <select id="realCryptoExchange" class="select-control">
+                <option value="Binance">Binance</option>
+                <option value="Bybit">Bybit</option>
+                <option value="OKX">OKX</option>
+                <option value="Indodax">Indodax</option>
+                <option value="Tokocrypto">Tokocrypto</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="realCryptoMarketType">Tipe Pasar:</label>
+              <select id="realCryptoMarketType" class="select-control">
+                <option value="futures">USDT-M Futures (Dua Arah / Long & Short)</option>
+                <option value="spot">Spot Trading (Beli & Simpan)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="realCryptoApiKey">API Key Exchange:</label>
+            <input type="text" id="realCryptoApiKey" class="form-input" placeholder="Masukkan API Key dari exchange" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="realCryptoApiSecret">API Secret Key:</label>
+            <div style="display:flex; gap:6px;">
+              <input type="password" id="realCryptoApiSecret" class="form-input" placeholder="Masukkan API Secret Key" style="flex:1;" required>
+              <button type="button" id="btnToggleCryptoSecret" class="btn-reset-acc" style="font-size:0.7rem; padding:6px 8px; color:var(--text-primary);">Lihat</button>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="form-group">
+              <label class="form-label" for="realCryptoBalance">Saldo Riil ($ USDT):</label>
+              <input type="number" id="realCryptoBalance" class="form-input" value="500" step="50" min="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="realCryptoLeverage">Leverage Futures:</label>
+              <select id="realCryptoLeverage" class="select-control">
+                <option value="1">1x (Spot / No Leverage)</option>
+                <option value="5">5x</option>
+                <option value="10" selected>10x (Standar)</option>
+                <option value="20">20x</option>
+                <option value="50">50x</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background:rgba(0,240,144,0.08); border:1px solid rgba(0,240,144,0.3); padding:10px 12px; border-radius:var(--radius-sm); font-size:0.75rem; color:var(--neon-green); line-height:1.4;">
+            🛡️ <b>Keamanan Terjamin:</b> Kredensial API Key disimpan lokal di perangkat Anda. Jangan pernah mencentang izin <i>"Enable Withdrawals"</i> di exchange.
+          </div>
+
+          <button type="submit" class="btn-submit-form" style="background:linear-gradient(135deg, #00f090, #00b4d8); color:#030712; font-weight:800; padding:12px;">
+            🚀 Hubungkan & Aktifkan Akun Real Crypto
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/sounds.js?v=3.0"></script>
+  <script src="/js/chart.js?v=3.0"></script>
+  <script src="/js/app.js?v=3.0"></script>
+
+</body>
+</html>

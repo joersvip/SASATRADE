@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  apexai-trading:
+    build: .
+    container_name: apexai_trading_robot
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Persistent storage agar akun & riwayat transaksi tidak hilang saat container di-restart
+      - ./data:/app/data
