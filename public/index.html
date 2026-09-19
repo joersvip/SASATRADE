@@ -629,8 +629,46 @@
     <!-- RIGHT: AI BOT CONTROL & REASONING TERMINAL -->
     <aside class="sidebar-controls">
 
+      <!-- Account Summary Widget (Prominently Placed at Top) -->
+      <div class="panel-card" id="cardFinancialOverview">
+        <div class="panel-card-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+            <span>Finansial Akun</span>
+          </div>
+          <span class="active-badge-tag" id="sidebarAccBadge" style="font-size:0.68rem; font-family:var(--font-mono); color:var(--neon-green);">LIVE FEED</span>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">Balance</div>
+            <div class="metric-value" id="metricBalance">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Equity</div>
+            <div class="metric-value" id="metricEquity" style="color:var(--neon-green);">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Used Margin</div>
+            <div class="metric-value" id="metricMargin">$0.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Free Margin</div>
+            <div class="metric-value" id="metricFreeMargin">$10,000.00</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Margin Level</div>
+            <div class="metric-value" id="metricMarginLevel">0.0%</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Leverage</div>
+            <div class="metric-value" id="metricLeverage">1:100</div>
+          </div>
+        </div>
+      </div>
+
       <!-- AI Robot Configuration Widget -->
-      <div class="panel-card">
+      <div class="panel-card" id="cardAiEngineControls">
         <div class="panel-card-header">
           <div class="panel-title">
             <svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 012 2v1h4a2 2 0 012 2v3a2 2 0 01-2 2h-1v4a2 2 0 01-2 2h-1v1a2 2 0 01-4 0v-1H9a2 2 0 01-2-2v-4H6a2 2 0 01-2-2V7a2 2 0 012-2h4V4a2 2 0 012-2zm-3 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm6 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/></svg>
@@ -701,9 +739,8 @@
         </button>
       </div>
 
-
       <!-- AI Signal & Reasoning Feed -->
-      <div class="panel-card">
+      <div class="panel-card" id="cardAiSignals">
         <div class="panel-card-header">
           <div class="panel-title">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
@@ -713,43 +750,6 @@
 
         <div class="ai-reasoning-terminal" id="aiSignalsTerminal">
           <!-- Diisi JavaScript -->
-        </div>
-      </div>
-
-      <!-- Account Summary Widget -->
-      <div class="panel-card">
-        <div class="panel-card-header">
-          <div class="panel-title">
-            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-            <span>Finansial Akun</span>
-          </div>
-        </div>
-
-        <div class="metrics-grid">
-          <div class="metric-item">
-            <div class="metric-label">Balance</div>
-            <div class="metric-value" id="metricBalance">$10,000.00</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-label">Equity</div>
-            <div class="metric-value" id="metricEquity">$10,000.00</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-label">Used Margin</div>
-            <div class="metric-value" id="metricMargin">$0.00</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-label">Free Margin</div>
-            <div class="metric-value" id="metricFreeMargin">$10,000.00</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-label">Margin Level</div>
-            <div class="metric-value" id="metricMarginLevel">0.0%</div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-label">Leverage</div>
-            <div class="metric-value" id="metricLeverage">1:100</div>
-          </div>
         </div>
       </div>
 
