@@ -2357,6 +2357,24 @@ async function fetchAiStrategies() {
     if (!data.success) return;
     aiStrategiesData = data;
     renderAiStrategies(data);
+
+    // Fetch and update SQLite Brain Database metrics
+    try {
+      const dbRes = await fetch("/api/ai/brain-db/stats");
+      const dbStats = await dbRes.json();
+      if (dbStats.success) {
+        const dbBadge = document.getElementById("brainDbStatusText");
+        const labDbTag = document.getElementById("labDbInfoTag");
+        if (dbBadge) {
+          dbBadge.innerText = `apex_brain.db (${dbStats.file_size_kb} KB)`;
+        }
+        if (labDbTag) {
+          labDbTag.innerText = `🗄️ SQLite: apex_brain.db (${dbStats.evolved_strategies_count} Evolved • ${dbStats.learning_journal_entries} Jurnal • ${dbStats.file_size_kb} KB)`;
+        }
+      }
+    } catch (e) {
+      console.warn("Gagal mengambil stats database AI:", e);
+    }
   } catch (err) {
     console.error("Gagal memuat strategi AI:", err);
   }

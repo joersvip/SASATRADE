@@ -14,6 +14,7 @@ from backend.market_feed import MarketFeedManager
 from backend.ai_engine import AIEngine
 from backend.trading_engine import TradingEngine
 from backend.mt5_bridge import MT5Bridge
+from backend.brain_db import brain_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("trading_server")
@@ -521,11 +522,24 @@ def delete_strategy_endpoint(strategy_id: str):
     if strategy_id in ai_engine.strategy_generator.custom_strategies:
         del ai_engine.strategy_generator.custom_strategies[strategy_id]
         ai_engine.strategy_generator.save_custom_strategies()
+        try:
+            brain_db.delete_evolved_strategy(strategy_id)
+        except Exception:
+            pass
         if strategy_id in ai_engine.strategies:
             del ai_engine.strategies[strategy_id]
         trading_engine.log_event(f"Strategi kustom '{strategy_id}' dihapus dari sistem", level="info")
         return {"success": True, "message": "Strategi berhasil dihapus"}
     raise HTTPException(status_code=404, detail="Strategi tidak ditemukan atau merupakan strategi bawaan sistem.")
+
+# AI Brain SQLite Database Stats Endpoint
+@app.get("/api/ai/brain-db/stats")
+def get_brain_db_stats_endpoint():
+    try:
+        stats = brain_db.get_database_stats()
+        return {"success": True, **stats}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 # Backtest Laboratory Endpoint
 class RunBacktestModel(BaseModel):

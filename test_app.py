@@ -127,7 +127,19 @@ clean_r = client.delete(f"/api/ai/strategies/{new_strat['id']}")
 assert clean_r.status_code == 200, f"Clean strategy failed: {clean_r.text}"
 print(f"   Cleaned up test strategy: {new_strat['id']}")
 
-print("\n13. Testing Account Deletion & Cleanup:")
+print("\n13. Testing SQLite AI Brain Database (apex_brain.db):")
+db_r = client.get("/api/ai/brain-db/stats")
+assert db_r.status_code == 200, f"Brain DB stats failed: {db_r.text}"
+db_data = db_r.json()
+assert db_data.get("success") is True
+print(f"   Database Name: {db_data.get('db_name')}")
+print(f"   Database Size: {db_data.get('file_size_kb')} KB")
+print(f"   Evolved Strategies in DB: {db_data.get('evolved_strategies_count')}")
+print(f"   Learning Journal Entries: {db_data.get('learning_journal_entries')}")
+print(f"   Learned Patterns in DB: {db_data.get('learned_market_patterns')}")
+print(f"   Storage Architecture: {db_data.get('storage_type')}")
+
+print("\n14. Testing Account Deletion & Cleanup:")
 del_r = client.delete(f"/api/accounts/{new_acc['id']}")
 assert del_r.status_code == 200, f"Delete failed: {del_r.text}"
 del_data = del_r.json()

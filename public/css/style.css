@@ -2593,6 +2593,20 @@ body.pro-fit-screen .trading-table td {
   font-size: 0.76rem;
 }
 
+.brain-db-badge {
+  background: rgba(0, 242, 254, 0.1);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--neon-cyan);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+}
+
 /* ==========================================================================
    MARKET INTEL & NEWS SHIELD DASHBOARD
    ========================================================================== */

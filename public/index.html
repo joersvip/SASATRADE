@@ -494,9 +494,14 @@
                 <div style="font-size:0.75rem; color:var(--text-muted);">Otak AI beradaptasi otomatis: memperkuat bobot strategi profit dan memperketat filter saat loss</div>
               </div>
             </div>
-            <div class="brain-level-badge-large">
-              <span id="statBrainLevel">Level 1</span>
-              <span class="xp-progress-sub" id="statBrainXp">XP: 0 / 100</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="brain-db-badge" id="brainDbBadge" title="ApexAI SQLite Relational Database Engine">
+                <span class="db-icon">🗄️</span> <span id="brainDbStatusText">apex_brain.db (SQLite)</span>
+              </div>
+              <div class="brain-level-badge-large">
+                <span id="statBrainLevel">Level 1</span>
+                <span class="xp-progress-sub" id="statBrainXp">XP: 0 / 100</span>
+              </div>
             </div>
           </div>
 
@@ -754,7 +759,10 @@
 
             <!-- Weakness Insight Callout -->
             <div class="lab-insight-callout" id="labExperienceCallout">
-              <div class="insight-callout-title">💡 Analisis Pengalaman Portofolio:</div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="insight-callout-title">💡 Analisis Pengalaman Portofolio:</div>
+                <div style="font-size:0.68rem; color:var(--neon-cyan); font-family:var(--font-mono); font-weight:700;" id="labDbInfoTag">🗄️ SQLite: apex_brain.db</div>
+              </div>
               <div class="insight-callout-text" id="labWeaknessText">
                 Menganalisis riwayat transaksi empiris untuk mendeteksi celah trading...
               </div>

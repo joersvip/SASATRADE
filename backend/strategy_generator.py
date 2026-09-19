@@ -6,6 +6,11 @@ import random
 import logging
 from typing import Dict, List, Any, Optional
 
+try:
+    from backend.brain_db import brain_db
+except ImportError:
+    from brain_db import brain_db
+
 logger = logging.getLogger("strategy_generator")
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -24,6 +29,13 @@ class StrategyGenerator:
         self.custom_strategies: Dict[str, Dict[str, Any]] = self._load_custom_strategies()
 
     def _load_custom_strategies(self) -> Dict[str, Dict[str, Any]]:
+        try:
+            db_strats = brain_db.get_all_evolved_strategies()
+            if db_strats:
+                return db_strats
+        except Exception:
+            pass
+
         if os.path.exists(AI_STRATEGIES_FILE):
             try:
                 with open(AI_STRATEGIES_FILE, "r", encoding="utf-8") as f:
@@ -33,6 +45,11 @@ class StrategyGenerator:
         return {}
 
     def save_custom_strategies(self):
+        try:
+            for sid, s in self.custom_strategies.items():
+                brain_db.save_evolved_strategy(s)
+        except Exception:
+            pass
         try:
             os.makedirs(DATA_DIR, exist_ok=True)
             with open(AI_STRATEGIES_FILE, "w", encoding="utf-8") as f:

@@ -9,9 +9,11 @@ from typing import Dict, List, Any, Optional
 try:
     from backend.market_intel import MarketIntel
     from backend.strategy_generator import StrategyGenerator
+    from backend.brain_db import brain_db
 except ImportError:
     from market_intel import MarketIntel
     from strategy_generator import StrategyGenerator
+    from brain_db import brain_db
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 AI_CONFIG_FILE = os.path.join(DATA_DIR, "ai_config.json")
@@ -155,6 +157,15 @@ class AIEngine:
 
 
     def _load_memory(self) -> Dict[str, Any]:
+        try:
+            db_state = brain_db.get_brain_state()
+            if db_state and db_state.get("brain_level"):
+                res = dict(DEFAULT_AI_MEMORY)
+                res.update(db_state)
+                return res
+        except Exception:
+            pass
+
         if not os.path.exists(AI_MEMORY_FILE):
             self._save_memory_raw(DEFAULT_AI_MEMORY)
             return dict(DEFAULT_AI_MEMORY)
@@ -168,9 +179,12 @@ class AIEngine:
             return dict(DEFAULT_AI_MEMORY)
 
     def _save_memory_raw(self, mem: Dict[str, Any]):
-        os.makedirs(DATA_DIR, exist_ok=True)
-        with open(AI_MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(mem, f, indent=2)
+        try:
+            brain_db.save_brain_state(mem)
+        except Exception:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(AI_MEMORY_FILE, "w", encoding="utf-8") as f:
+                json.dump(mem, f, indent=2)
 
     def save_memory(self):
         self._save_memory_raw(self.memory)
@@ -237,6 +251,27 @@ class AIEngine:
                 "message": f"⭐ LEVEL UP! Otak AI meningkat ke Level {self.memory['brain_level']}! Kapasitas adaptasi pasar diperluas."
             }
             self.memory["learned_insights"].insert(0, lvl_entry)
+            # Create checkpoint in SQLite
+            try:
+                brain_db.create_checkpoint(
+                    brain_level=self.memory["brain_level"],
+                    xp=self.memory["experience_points"],
+                    reason=f"Level Up to {self.memory['brain_level']}",
+                    snapshot=self.memory
+                )
+            except Exception:
+                pass
+
+        # Record market pattern outcome in SQLite
+        try:
+            brain_db.record_pattern_outcome(
+                symbol=symbol,
+                pattern_name=strat_name,
+                success=is_win,
+                notes=f"PnL: ${pnl:.2f} ({'WIN' if is_win else 'LOSS'})"
+            )
+        except Exception:
+            pass
 
         self.save_memory()
         return {
