@@ -1247,30 +1247,46 @@ function selectSymbol(sym) {
 
 async function executeQuickTrade(direction) {
   const lotInput = document.getElementById("quickLotInput");
-  const lot = parseFloat(lotInput?.value || "0.1");
+  const lot = parseFloat(lotInput?.value || "0.01");
+  const currentSymbol = appState.activeSymbol;
 
   try {
     const res = await fetch("/api/order/open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        symbol: appState.activeSymbol,
+        symbol: currentSymbol,
         direction: direction,
         lot: lot,
         strategy: "Manual Trade"
       })
     });
     const data = await res.json();
-    if (data.success) {
+    if (res.ok && data.success) {
       if (direction === "BUY") window.soundFx?.playBuy();
       else window.soundFx?.playSell();
+      
+      const p = data.position;
+      const ticketInfo = p.ticket ? `\nNomor Ticket MT5: #${p.ticket}` : "";
+      alert(`🎉 ORDER ${direction} BERHASIL DIBUKA!\n\nSimbol: ${p.symbol}\nLot: ${p.lot}\nHarga Entry: ${p.entry_price}${ticketInfo}\nSL: ${p.sl || '-'} | TP: ${p.tp || '-'}`);
     } else {
-      alert(data.error || "Gagal membuka order");
+      window.soundFx?.playError();
+      const rawError = data.detail || data.error || "Gagal membuka order";
+      
+      if (rawError.includes("10018") || rawError.toLowerCase().includes("market closed")) {
+        alert(`⚠️ PASAR SEDANG TUTUP (MARKET CLOSED)\n\nPasar Forex / Logam (${currentSymbol}) saat ini sedang libur di akhir pekan (Sabtu & Minggu).\n\n💡 SOLUSI:\nSilakan klik simbol pasar CRYPTO (seperti BTCUSDT atau ETHUSDT) pada bilah pasar di atas. Pasar Crypto buka 24/7 dan bisa langsung ditradingkan sekarang!`);
+      } else if (rawError.includes("10027") || rawError.toLowerCase().includes("autotrading disabled")) {
+        alert(`⚠️ IZIN TRADING OTOMATIS BELUM AKTIF DI MT5\n\nPastikan tombol 'Algo Trading' pada toolbar MetaTrader 5 sudah diaktifkan (berwarna hijau).`);
+      } else {
+        alert(`Gagal Membuka Order:\n\n${rawError}`);
+      }
     }
   } catch (e) {
-    alert("Koneksi gagal saat order");
+    window.soundFx?.playError();
+    alert("Koneksi gagal saat order: " + e.message);
   }
 }
+
 
 async function closeOrder(posId) {
   try {
