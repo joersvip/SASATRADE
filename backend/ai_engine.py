@@ -129,9 +129,15 @@ class AIEngine:
             "trailing_stop_enabled": True,
             "trailing_stop_pips": 20,
             "target_markets": ["forex", "crypto", "stocks"],
-            "symbols_whitelist": ["EURUSD", "GBPUSD", "XAUUSD", "BTCUSDT", "ETHUSDT", "NVDA", "AAPL"]
+            "symbols_whitelist": ["EURUSD", "GBPUSD", "XAUUSD", "BTCUSDT", "ETHUSDT", "NVDA", "AAPL"],
+            # Pengaturan Besaran Lot AI (Smart Lot Sizing)
+            "lot_sizing_mode": "ai_dynamic", # "ai_dynamic", "fixed_risk_pct", "fixed_lot"
+            "fixed_lot_size": 0.01,
+            "max_lot_limit": 1.0,
+            "min_lot_limit": 0.01
         }
         self.recent_signals: List[Dict[str, Any]] = []
+
 
     def _load_memory(self) -> Dict[str, Any]:
         if not os.path.exists(AI_MEMORY_FILE):
@@ -438,7 +444,106 @@ class AIEngine:
             "current_price": closes[-1]
         }
 
+    def calculate_lot_size(
+        self,
+        symbol: str,
+        symbol_cfg: Dict[str, Any],
+        account: Dict[str, Any],
+        entry_price: float,
+        sl_price: Optional[float] = None,
+        confidence: float = 75.0,
+        atr: float = 0.0,
+        is_ai: bool = True
+    ) -> float:
+        """
+        Kalkulasi besaran LOT cerdas oleh AI Engine:
+        1. Mode 'fixed_lot': menggunakan nilai lot tetap yang ditentukan pengguna.
+        2. Mode 'fixed_risk_pct': alokasi risiko persentase modal murni (Prop Firm Standard).
+        3. Mode 'ai_dynamic': Smart Sizing berbasis Jarak Stop Loss, Skor Keyakinan (Confidence Multiplier),
+           Regim Volatilitas Pasar (ATR), dan Guardrail Keamanan Margin.
+        """
+        mode = self.settings.get("lot_sizing_mode", "ai_dynamic")
+        min_limit = max(0.01, float(self.settings.get("min_lot_limit", 0.01)))
+        max_limit = max(min_limit, float(self.settings.get("max_lot_limit", 1.0)))
+
+        # 1. Mode Fixed Lot Manual
+        if mode == "fixed_lot":
+            fixed_val = float(self.settings.get("fixed_lot_size", 0.01))
+            return round(max(min_limit, min(fixed_val, max_limit)), 2)
+
+        # 2. Perhitungan Modal Acuan & Normalisasi Mata Uang
+        equity = float(account.get("equity", 1000.0)) if account else 1000.0
+        currency = (account.get("currency") or "USD").upper() if account else "USD"
+
+        # Normalisasi ke ekuivalen USD jika akun berdenominasi IDR (1 USD ~ 16.000 IDR)
+        # agar alokasi risiko dolar tidak membengkak menjadi ribuan lot
+        usd_equity = (equity / 16000.0) if currency == "IDR" else equity
+
+        risk_pct = float(self.settings.get("risk_per_trade_pct", 2.0))
+        risk_amount_usd = max(usd_equity * (risk_pct / 100.0), 0.5)
+
+        # 3. Jarak Stop Loss & Parameter Simbol
+        pip_size = symbol_cfg.get("pip_size", 0.0001)
+        lot_unit = symbol_cfg.get("lot_unit", 100000)
+        category = symbol_cfg.get("category", "forex")
+
+        if sl_price and entry_price and abs(entry_price - sl_price) > 0:
+            sl_dist = abs(entry_price - sl_price)
+        else:
+            sl_dist = max(atr * 1.5, pip_size * 30) if atr > 0 else pip_size * 30
+
+        # 4. Kalkulasi Lot Berdasarkan Kategori Aset
+        if category == "forex":
+            sl_pips = max(sl_dist / pip_size, 10.0)
+            # 1 Standard Lot Forex (100.000 unit) = ~$10 per pip
+            pip_value_approx = 10.0
+            calculated_lot = risk_amount_usd / (sl_pips * pip_value_approx)
+        elif category == "crypto":
+            # 1 Lot Crypto = 1 Unit Koin
+            calculated_lot = risk_amount_usd / max(sl_dist, entry_price * 0.01)
+        else:
+            # Saham / Indeks
+            calculated_lot = risk_amount_usd / max(sl_dist, entry_price * 0.02)
+
+        # 5. Khusus Mode 'ai_dynamic': Dynamic Confidence & Volatility Multiplier
+        if mode == "ai_dynamic":
+            # Sizing berbasis keyakinan (Confidence Weighted)
+            if confidence >= 90.0:
+                conf_multiplier = 1.25   # Setup A+: Tambah lot 25%
+            elif confidence >= 80.0:
+                conf_multiplier = 1.00   # Setup Standar
+            else:
+                conf_multiplier = 0.75   # Setup Moderat: Pangkas lot 25%
+            
+            calculated_lot *= conf_multiplier
+
+            # Volatility Dampener jika ATR tersedia (pasar terlalu volatil)
+            if atr > 0 and entry_price > 0:
+                atr_pct = atr / entry_price
+                if atr_pct > 0.02: # Volatilitas > 2% per bar
+                    calculated_lot *= 0.80
+
+        # 6. Guardrail Keamanan Margin & Leverage
+        leverage = int(account.get("leverage", 100)) if account else 100
+        free_margin = float(account.get("free_margin", equity)) if account else equity
+
+        # Batasi margin maksimum yang diizinkan per trade: max 25% dari free margin
+        max_allowed_margin = max(free_margin * 0.25, 10.0)
+        margin_per_lot = (entry_price * lot_unit) / leverage if leverage > 0 else entry_price
+
+        if currency == "IDR":
+            margin_per_lot *= 16000.0
+
+        if margin_per_lot > 0:
+            max_lot_by_margin = max_allowed_margin / margin_per_lot
+            calculated_lot = min(calculated_lot, max_lot_by_margin)
+
+        # 7. Pembulatan dan Pembatasan Nilai Minimum & Maksimum
+        final_lot = round(max(min_limit, min(calculated_lot, max_limit)), 2)
+        return final_lot
+
     def evaluate_market(self, symbol: str, symbol_cfg: Dict[str, Any], candles: List[Dict[str, Any]], price_info: Dict[str, Any], h1_candles: Optional[List[Dict[str, Any]]] = None) -> Optional[Dict[str, Any]]:
+
         """Evaluasi kondisi pasar dengan strategi AI aktif dan Multi-Timeframe Confluence"""
         if len(candles) < 20:
             return None
@@ -582,13 +687,25 @@ class AIEngine:
             tp_price = round(entry_price - tp_dist, digits)
 
         # AI Engine source label
-        provider_tag = f"Cloud LLM ({self.api_config['provider'].upper()})" if self.api_config.get("enabled") and self.api_config.get("api_key") else "Local Engine"
+        # AI Smart Position Sizing
+        recommended_lot = self.calculate_lot_size(
+            symbol=symbol,
+            symbol_cfg=symbol_cfg,
+            account={"equity": 1000.0, "currency": "USD", "leverage": 100},
+            entry_price=entry_price,
+            sl_price=sl_price,
+            confidence=confidence,
+            atr=atr,
+            is_ai=True
+        )
 
         signal = {
             "id": f"sig-{int(time.time()*1000)}-{random.randint(100,999)}",
             "symbol": symbol,
             "category": symbol_cfg["category"],
             "direction": signal_dir,
+            "lot": recommended_lot,
+            "recommended_lot": recommended_lot,
             "strategy": self.strategies.get(strategy_id, {}).get("name", "AI Strategy"),
             "strategy_id": strategy_id,
             "provider_tag": provider_tag,
@@ -598,9 +715,10 @@ class AIEngine:
             "tp": tp_price,
             "rr_ratio": rr_ratio,
             "reasoning": reasons,
-            "summary_text": f"AI Signal [{signal_dir}] pada {symbol}: Keyakinan {confidence}% via {provider_tag}. " + " | ".join(reasons),
+            "summary_text": f"AI Signal [{signal_dir}] pada {symbol}: Lot {recommended_lot} (Keyakinan {confidence}% via {provider_tag}). " + " | ".join(reasons),
             "timestamp": int(time.time())
         }
+
 
         # Keep last 30 signals
         self.recent_signals.insert(0, signal)

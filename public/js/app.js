@@ -686,6 +686,14 @@ function renderAISettingsUI() {
   if (riskInput) {
     riskInput.value = s.risk_per_trade_pct || 2.0;
   }
+
+  const lotModeSelect = document.getElementById("aiLotSizingSelect");
+  const fixedLotInput = document.getElementById("aiFixedLotInput");
+  const maxLotInput = document.getElementById("aiMaxLotInput");
+
+  if (lotModeSelect) lotModeSelect.value = s.lot_sizing_mode || "ai_dynamic";
+  if (fixedLotInput) fixedLotInput.value = s.fixed_lot_size || 0.01;
+  if (maxLotInput) maxLotInput.value = s.max_lot_limit || 0.50;
 }
 
 function renderAIBrainBadge() {
@@ -724,6 +732,7 @@ function renderAISignals() {
   container.innerHTML = appState.recentSignals.map(sig => {
     const isBuy = sig.direction === "BUY";
     const date = new Date(sig.timestamp * 1000).toLocaleTimeString();
+    const lotDisplay = sig.lot || sig.recommended_lot ? ` • Lot AI: <b>${sig.lot || sig.recommended_lot}</b>` : '';
     return `
       <div class="reason-entry ${isBuy ? 'buy' : 'sell'}">
         <div class="reason-head">
@@ -731,7 +740,7 @@ function renderAISignals() {
           <span class="reason-conf">${sig.confidence}% CONF</span>
         </div>
         <div class="reason-desc">
-          <b>${sig.strategy}</b> • SL: ${sig.sl} | TP: ${sig.tp}
+          <b>${sig.strategy}</b>${lotDisplay} • SL: ${sig.sl} | TP: ${sig.tp}
           <br>
           ${sig.reasoning ? sig.reasoning.join(" • ") : sig.summary_text}
         </div>
@@ -739,6 +748,7 @@ function renderAISignals() {
     `;
   }).join("");
 }
+
 
 function renderAccountMetrics() {
   const acc = appState.activeAccount;
@@ -1042,6 +1052,20 @@ function setupEvents() {
   document.getElementById("aiRiskInput")?.addEventListener("change", (e) => {
     updateAISetting({ risk_per_trade_pct: parseFloat(e.target.value) });
   });
+
+  // AI Lot Sizing Controls
+  document.getElementById("aiLotSizingSelect")?.addEventListener("change", (e) => {
+    updateAISetting({ lot_sizing_mode: e.target.value });
+  });
+
+  document.getElementById("aiFixedLotInput")?.addEventListener("change", (e) => {
+    updateAISetting({ fixed_lot_size: parseFloat(e.target.value) || 0.01 });
+  });
+
+  document.getElementById("aiMaxLotInput")?.addEventListener("change", (e) => {
+    updateAISetting({ max_lot_limit: parseFloat(e.target.value) || 1.0 });
+  });
+
 
   // Scan Now Button
   document.getElementById("aiScanNowBtn")?.addEventListener("click", async () => {

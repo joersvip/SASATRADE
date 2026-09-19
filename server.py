@@ -431,6 +431,10 @@ class UpdateAISettingsModel(BaseModel):
     risk_per_trade_pct: Optional[float] = None
     max_open_trades: Optional[int] = None
     trailing_stop_enabled: Optional[bool] = None
+    lot_sizing_mode: Optional[str] = None
+    fixed_lot_size: Optional[float] = None
+    max_lot_limit: Optional[float] = None
+    min_lot_limit: Optional[float] = None
 
 @app.post("/api/ai/settings")
 def update_ai_settings(body: UpdateAISettingsModel):

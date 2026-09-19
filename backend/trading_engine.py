@@ -90,26 +90,6 @@ class TradingEngine:
 
         entry_price = price_info["ask"] if direction == "BUY" else price_info["bid"]
 
-        # Default lot size calculation based on risk % if not given
-        if not lot or lot <= 0:
-            risk_pct = self.ai_engine.settings.get("risk_per_trade_pct", 2.0)
-            risk_amount = acc["equity"] * (risk_pct / 100.0)
-            
-            if cfg["category"] == "forex":
-                lot = round(max(0.01, min(risk_amount / 200.0, 5.0)), 2)
-            elif cfg["category"] == "crypto":
-                lot = round(max(0.01, (risk_amount / (entry_price * 0.05 + 1e-6))), 2)
-            else:
-                lot = round(max(1.0, (risk_amount / (entry_price * 0.1 + 1e-6))), 1)
-
-        # Margin calculation
-        leverage = acc.get("leverage", 100)
-        contract_value = entry_price * lot * cfg["lot_unit"]
-        required_margin = round(contract_value / leverage, 2)
-
-        if acc["free_margin"] < required_margin:
-            return {"success": False, "error": f"Free margin tidak mencukupi (Perlu: ${required_margin}, Tersedia: ${acc['free_margin']})"}
-
         # Dynamic SL and TP
         pip = cfg["pip_size"]
         if not sl:
@@ -117,7 +97,37 @@ class TradingEngine:
         if not tp:
             tp = round(entry_price + (pip * 60) if direction == "BUY" else entry_price - (pip * 60), digits)
 
+        # Penentuan Besaran Lot Cerdas oleh AI Engine (Smart Dynamic Lot Sizing)
+        if not lot or lot <= 0 or is_ai:
+            lot = self.ai_engine.calculate_lot_size(
+                symbol=symbol,
+                symbol_cfg=cfg,
+                account=acc,
+                entry_price=entry_price,
+                sl_price=sl,
+                confidence=80.0,
+                is_ai=is_ai
+            )
+
+        # Margin calculation & Currency Normalization
+        leverage = acc.get("leverage", 100) or 100
+        contract_value_usd = entry_price * lot * cfg["lot_unit"]
+        required_margin_usd = contract_value_usd / leverage
+        
+        # Jika akun IDR, margin yang diperlukan dihitung dalam IDR
+        acc_currency = (acc.get("currency") or "USD").upper()
+        if acc_currency == "IDR":
+            required_margin = round(required_margin_usd * 16000.0, 2)
+            curr_symbol = "Rp"
+        else:
+            required_margin = round(required_margin_usd, 2)
+            curr_symbol = "$"
+
+        if acc.get("free_margin", 0.0) < required_margin and not (acc.get("mode") == "real" and acc.get("type") == "mt5"):
+            return {"success": False, "error": f"Free margin tidak mencukupi (Perlu: {curr_symbol} {required_margin:,.2f}, Tersedia: {curr_symbol} {acc['free_margin']:,.2f})"}
+
         # Real Execution via MT5 Broker if connected
+
         ticket = None
         if acc.get("mode") == "real" and acc.get("type") == "mt5" and self.mt5_bridge and self.mt5_bridge.connected:
             mt5_res = self.mt5_bridge.send_order(
@@ -540,11 +550,23 @@ class TradingEngine:
 
             signal = self.ai_engine.evaluate_market(sym, cfg, candles, p_info, h1_candles=h1_candles)
             if signal:
-                reason_str = f"[{signal['strategy']}] " + " | ".join(signal["reasoning"][:2])
+                # Kalkulasi besaran lot cerdas AI berdasarkan akun riil aktif
+                ai_lot = self.ai_engine.calculate_lot_size(
+                    symbol=sym,
+                    symbol_cfg=cfg,
+                    account=active_acc,
+                    entry_price=signal["price"],
+                    sl_price=signal["sl"],
+                    confidence=signal.get("confidence", 75.0),
+                    is_ai=True
+                )
+
+                reason_str = f"[{signal['strategy']}] Lot: {ai_lot} | " + " | ".join(signal["reasoning"][:2])
                 res = self.open_position(
                     account_id=active_acc["id"],
                     symbol=sym,
                     direction=signal["direction"],
+                    lot=ai_lot,
                     sl=signal["sl"],
                     tp=signal["tp"],
                     strategy=signal["strategy"],
@@ -553,11 +575,12 @@ class TradingEngine:
                 )
                 if res.get("success"):
                     self.log_event(
-                        f"🤖 Robot AI mengeksekusi {signal['direction']} {sym} (Confidence: {signal['confidence']}%)",
+                        f"🤖 Robot AI mengeksekusi {signal['direction']} {sym} (Lot: {ai_lot}, Confidence: {signal['confidence']}%)",
                         level="info",
                         symbol=sym
                     )
                 break
+
 
     def get_performance_metrics(self, account_id: str):
         trades = [h for h in self.history if h["account_id"] == account_id]

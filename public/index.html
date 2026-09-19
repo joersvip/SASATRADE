@@ -646,10 +646,31 @@
           <input type="number" id="aiRiskInput" class="select-control" value="2.0" step="0.5" min="0.5" max="10">
         </div>
 
+        <div class="control-field">
+          <label class="control-label" for="aiLotSizingSelect">Mode Besaran Lot AI:</label>
+          <select id="aiLotSizingSelect" class="select-control">
+            <option value="ai_dynamic" selected>🧠 AI Dynamic Sizing (Modal, SL, & Confidence)</option>
+            <option value="fixed_risk_pct">🛡️ Fixed Risk % Modal (Proporsional SL)</option>
+            <option value="fixed_lot">📌 Fixed Lot (Lot Tetap Manual)</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="control-field">
+            <label class="control-label" for="aiFixedLotInput" title="Besaran lot saat mode Fixed Lot dipilih">Lot Tetap:</label>
+            <input type="number" id="aiFixedLotInput" class="select-control" value="0.01" step="0.01" min="0.01" max="5.0">
+          </div>
+          <div class="control-field">
+            <label class="control-label" for="aiMaxLotInput" title="Batas maksimal lot yang boleh dieksekusi robot AI demi melindungi margin">Batas Max Lot:</label>
+            <input type="number" id="aiMaxLotInput" class="select-control" value="0.50" step="0.05" min="0.01" max="10.0">
+          </div>
+        </div>
+
         <button class="btn-scan-now" id="aiScanNowBtn">
           ⚡ Pindai Pasar Sekarang (Force Scan)
         </button>
       </div>
+
 
       <!-- AI Signal & Reasoning Feed -->
       <div class="panel-card">
