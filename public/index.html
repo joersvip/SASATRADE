@@ -384,6 +384,12 @@
         <button class="tab-btn" data-target="paneBacktest" id="tabBtnBacktest">
           <span>🔬 Backtest Lab AI</span>
         </button>
+        <button class="tab-btn" data-target="paneMarketIntel" id="tabBtnMarketIntel">
+          <span>🌐 Intel Berita & Kalender</span>
+        </button>
+        <button class="tab-btn" data-target="paneAiLab" id="tabBtnAiLab">
+          <span>🧬 AI Strategy Lab</span>
+        </button>
         <button class="tab-btn" data-target="paneLogs" id="tabBtnLogs">
           <span>System Console</span>
         </button>
@@ -633,6 +639,157 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE 6: MARKET INTEL & NEWS SHIELD -->
+    <div class="tab-content-pane" id="paneMarketIntel" style="display:none;">
+      <div class="intel-dashboard-layout">
+        <!-- Top Summary Bar -->
+        <div class="intel-summary-bar">
+          <div class="intel-stat-card">
+            <div class="intel-stat-header">
+              <span class="intel-stat-icon">🛡️</span>
+              <span class="intel-stat-title">High-Impact News Shield</span>
+            </div>
+            <div class="intel-shield-status" id="intelShieldStatus">
+              <span class="shield-indicator standby" id="shieldLed"></span>
+              <span id="intelShieldText">STANDBY - Pasar Stabil</span>
+            </div>
+            <div class="intel-stat-sub" id="intelShieldDetail">Tidak ada rilis berita ekstrem dalam 30 menit</div>
+          </div>
+
+          <div class="intel-stat-card">
+            <div class="intel-stat-header">
+              <span class="intel-stat-icon">🌐</span>
+              <span class="intel-stat-title">Sentimen Makro Pasar Global</span>
+            </div>
+            <div class="intel-sentiment-display">
+              <div class="sentiment-badge-tag neutral" id="intelSentimentBadge">NEUTRAL / BALANCED</div>
+              <span class="sentiment-score-val" id="intelSentimentScore">0.0%</span>
+            </div>
+            <div class="sentiment-bar-track">
+              <div class="sentiment-bar-fill" id="intelSentimentBar" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <div class="intel-stat-card">
+            <div class="intel-stat-header">
+              <span class="intel-stat-icon">📡</span>
+              <span class="intel-stat-title">Sumber Intelijen Publik</span>
+            </div>
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-top:4px;">
+              ForexFactory & Global RSS Feeds
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+              <span style="font-size:0.72rem; color:var(--text-muted);" id="intelLastUpdate">Diperbarui: -</span>
+              <button class="btn-xs-refresh" id="btnRefreshIntel">🔄 Refresh Intel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid: Calendar & News -->
+        <div class="intel-grid">
+          <!-- Calendar Table -->
+          <div class="intel-card">
+            <div class="intel-card-header">
+              <div class="intel-card-title">
+                <span>📅 Kalender Ekonomi Terjadwal (High/Medium Impact)</span>
+              </div>
+              <span class="badge-pill" id="intelCalendarCount">0 Acara</span>
+            </div>
+            <div class="table-responsive" style="max-height: 420px; overflow-y:auto;">
+              <table class="trading-table intel-table">
+                <thead>
+                  <tr>
+                    <th>Mata Uang</th>
+                    <th>Dampak</th>
+                    <th>Acara / Berita</th>
+                    <th>Jadwal</th>
+                    <th>Perkiraan / Lalu</th>
+                    <th>Status Shield</th>
+                  </tr>
+                </thead>
+                <tbody id="intelCalendarTableBody">
+                  <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">Memuat kalender ekonomi global...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- News Feed -->
+          <div class="intel-card">
+            <div class="intel-card-header">
+              <div class="intel-card-title">
+                <span>📰 Ringkasan Berita Pasar Finansial & Analisis Sentimen</span>
+              </div>
+              <span class="badge-pill" id="intelNewsCount">0 Berita</span>
+            </div>
+            <div class="intel-news-stream" id="intelNewsStream">
+              <div style="text-align:center; color:var(--text-muted); padding:20px;">Memuat berita pasar...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE 7: AUTONOMOUS AI STRATEGY LAB -->
+    <div class="tab-content-pane" id="paneAiLab" style="display:none;">
+      <div class="ai-lab-layout">
+        <!-- Experience & Generator Action Header -->
+        <div class="ai-lab-header-card">
+          <div class="ai-lab-header-left">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="dna-icon-badge">🧬</div>
+              <div>
+                <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:var(--neon-green);">
+                  Autonomous Strategy Synthesizer & Evolutionary Lab
+                </h3>
+                <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
+                  AI menganalisis hasil transaksi nyata, merancang formula strategi baru, dan menguji kelayakannya secara otomatis sebelum diterapkan ke pasar riil.
+                </p>
+              </div>
+            </div>
+
+            <!-- Weakness Insight Callout -->
+            <div class="lab-insight-callout" id="labExperienceCallout">
+              <div class="insight-callout-title">💡 Analisis Pengalaman Portofolio:</div>
+              <div class="insight-callout-text" id="labWeaknessText">
+                Menganalisis riwayat transaksi empiris untuk mendeteksi celah trading...
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-lab-header-right">
+            <div class="lab-target-select-wrap">
+              <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:4px;">Aset Target Evolusi:</label>
+              <select id="labTargetSymbol" class="select-control" style="font-size:0.85rem; padding:6px 10px;">
+                <option value="XAUUSD" selected>XAUUSD (Gold Emas)</option>
+                <option value="BTCUSDT">BTCUSDT (Bitcoin Crypto)</option>
+                <option value="EURUSD">EURUSD (Euro Forex)</option>
+                <option value="GBPUSD">GBPUSD (Pound Forex)</option>
+                <option value="ETHUSDT">ETHUSDT (Ethereum)</option>
+              </select>
+            </div>
+            <button class="btn-synthesize-strategy" id="btnTriggerGenerateStrategy">
+              <span class="btn-icon">⚡</span>
+              <span>Ciptakan Strategi Baru Sekarang</span>
+            </button>
+            <div class="synth-spinner-text" id="labSynthStatus" style="display:none;">
+              <span class="spin-dot"></span> AI sedang merumuskan algoritma & backtest 500 candle...
+            </div>
+          </div>
+        </div>
+
+        <!-- Strategy Catalog Grid -->
+        <div class="ai-lab-catalog-header">
+          <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">Katalog Strategi Aktif & Hasil Evolusi AI</span>
+          <span class="badge-pill" id="labStrategyTotalCount">0 Strategi</span>
+        </div>
+
+        <div class="ai-strategies-grid" id="aiStrategiesGrid">
+          <!-- Diisi JavaScript -->
         </div>
       </div>
     </div>

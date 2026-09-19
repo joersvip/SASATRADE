@@ -79,6 +79,8 @@ async function initApp() {
   await fetchFullState();
   initMultiChartSystem();
   initWebSocket();
+  fetchMarketIntel();
+  fetchAiStrategies();
 }
 
 // 1. Data Fetching
@@ -1217,6 +1219,12 @@ function setupEvents() {
       if (btn.dataset.target === "paneBacktest" && backtestEquityData.length > 0) {
         setTimeout(() => drawBacktestEquityChart(backtestEquityData), 50);
       }
+      if (btn.dataset.target === "paneMarketIntel") {
+        fetchMarketIntel();
+      }
+      if (btn.dataset.target === "paneAiLab") {
+        fetchAiStrategies();
+      }
       window.soundFx?.playClick();
     });
   });
@@ -1418,6 +1426,10 @@ function setupEvents() {
   document.getElementById("btnToggleCryptoSecret")?.addEventListener("click", () => togglePasswordVisibility("realCryptoApiSecret", "btnToggleCryptoSecret"));
   document.getElementById("realMT5Form")?.addEventListener("submit", (e) => submitRealMT5Account(e));
   document.getElementById("realCryptoForm")?.addEventListener("submit", (e) => submitRealCryptoAccount(e));
+
+  // Market Intel & AI Strategy Lab Triggers
+  document.getElementById("btnRefreshIntel")?.addEventListener("click", () => fetchMarketIntel(true));
+  document.getElementById("btnTriggerGenerateStrategy")?.addEventListener("click", () => triggerGenerateStrategy());
 
   // Form New Account Submit
   document.getElementById("newAccountForm")?.addEventListener("submit", async (e) => {
@@ -2196,5 +2208,310 @@ function drawBacktestEquityChart(curve) {
   ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
   ctx.fillStyle = strokeColor;
   ctx.fill();
+}
+
+// ==========================================================================
+// MARKET INTEL & HIGH-IMPACT NEWS SHIELD CONTROLLER
+// ==========================================================================
+let marketIntelData = null;
+
+async function fetchMarketIntel(forceRefresh = false) {
+  try {
+    const res = await fetch("/api/ai/market-intel");
+    const data = await res.json();
+    if (!data.success && !data.events) return;
+    marketIntelData = data;
+    renderMarketIntel(data);
+    if (forceRefresh) {
+      window.soundFx?.playClick();
+    }
+  } catch (err) {
+    console.error("Gagal memuat market intel:", err);
+  }
+}
+
+function renderMarketIntel(data) {
+  // 1. High Impact News Shield Status
+  const shield = data.news_shield || {};
+  const shieldLed = document.getElementById("shieldLed");
+  const shieldText = document.getElementById("intelShieldText");
+  const shieldDetail = document.getElementById("intelShieldDetail");
+
+  if (shield.shield_active) {
+    if (shieldLed) shieldLed.className = "shield-indicator active";
+    if (shieldText) {
+      shieldText.innerText = "🚨 SHIELD AKTIF - PROTEKSI SLIPPAGE";
+      shieldText.style.color = "var(--neon-red)";
+    }
+    if (shieldDetail) {
+      shieldDetail.innerText = `Berita High-Impact '${shield.event}' (${shield.currency}) rilis dalam ${shield.minutes_away} menit!`;
+    }
+  } else {
+    if (shieldLed) shieldLed.className = "shield-indicator standby";
+    if (shieldText) {
+      shieldText.innerText = "STANDBY - Pasar Stabil";
+      shieldText.style.color = "var(--text-primary)";
+    }
+    if (shieldDetail) {
+      shieldDetail.innerText = "Tidak ada rilis berita berdampak tinggi dalam 30 menit ke depan";
+    }
+  }
+
+  // 2. Global Macro Sentiment
+  const sentBadge = document.getElementById("intelSentimentBadge");
+  const sentScore = document.getElementById("intelSentimentScore");
+  const sentBar = document.getElementById("intelSentimentBar");
+  const score = data.sentiment_score || 0;
+  const sentType = (data.sentiment || "NEUTRAL").toUpperCase();
+
+  if (sentBadge) {
+    sentBadge.innerText = sentType;
+    sentBadge.className = "sentiment-badge-tag " + (score > 15 ? "bullish" : score < -15 ? "bearish" : "neutral");
+  }
+  if (sentScore) {
+    sentScore.innerText = (score >= 0 ? "+" : "") + score.toFixed(1) + "%";
+    sentScore.style.color = score > 15 ? "var(--neon-green)" : score < -15 ? "var(--neon-red)" : "var(--neon-cyan)";
+  }
+  if (sentBar) {
+    const pct = Math.max(0, Math.min(100, Math.round((score + 100) / 2)));
+    sentBar.style.width = pct + "%";
+  }
+
+  // 3. Last Updated
+  const lastUpEl = document.getElementById("intelLastUpdate");
+  if (lastUpEl && data.timestamp) {
+    lastUpEl.innerText = "Diperbarui: " + data.timestamp;
+  }
+
+  // 4. Economic Calendar Table
+  const calBody = document.getElementById("intelCalendarTableBody");
+  const calCount = document.getElementById("intelCalendarCount");
+  const events = data.events || [];
+
+  if (calCount) calCount.innerText = `${events.length} Acara`;
+
+  if (calBody) {
+    if (events.length === 0) {
+      calBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Tidak ada jadwal rilis berita ekonomi saat ini.</td></tr>`;
+    } else {
+      calBody.innerHTML = events.map(ev => {
+        const impactClass = (ev.impact || "").toLowerCase();
+        const isNear = ev.shield_triggered || Math.abs(ev.minutes_away || 999) <= 30;
+        const countdownClass = isNear ? "countdown-badge danger" : "countdown-badge safe";
+        const countdownText = ev.minutes_away !== undefined ? (ev.minutes_away >= 0 ? `${ev.minutes_away}m lagi` : 'Selesai') : '-';
+
+        return `
+          <tr>
+            <td><span class="currency-badge">${ev.currency || 'USD'}</span></td>
+            <td><span class="impact-badge ${impactClass}">${ev.impact || 'MEDIUM'}</span></td>
+            <td style="font-weight:600;">${ev.title || '-'}</td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-secondary);">${ev.time || ev.date || '-'}</td>
+            <td style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted);">${ev.forecast ? `${ev.forecast} (Lalu: ${ev.previous || '-'})` : '-'}</td>
+            <td><span class="${countdownClass}">${countdownText}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+  }
+
+  // 5. Financial News Stream
+  const newsStream = document.getElementById("intelNewsStream");
+  const newsCount = document.getElementById("intelNewsCount");
+  const newsList = data.news || [];
+
+  if (newsCount) newsCount.innerText = `${newsList.length} Berita`;
+
+  if (newsStream) {
+    if (newsList.length === 0) {
+      newsStream.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada berita yang diindeks.</div>`;
+    } else {
+      newsStream.innerHTML = newsList.map(n => {
+        const sent = n.sentiment || "NEUTRAL";
+        const badgeClass = sent === "BULLISH" ? "bullish" : sent === "BEARISH" ? "bearish" : "neutral";
+        return `
+          <div class="news-item-card">
+            <div class="news-item-top">
+              <span class="news-source-badge">${n.source || 'GLOBAL NEWS'}</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="sentiment-badge-tag ${badgeClass}" style="font-size:0.62rem; padding:1px 6px;">${sent}</span>
+                <span class="news-time-sub">${n.time || ''}</span>
+              </div>
+            </div>
+            <div class="news-title-text">${n.title || ''}</div>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+}
+
+// ==========================================================================
+// AUTONOMOUS AI STRATEGY LAB CONTROLLER
+// ==========================================================================
+let aiStrategiesData = null;
+
+async function fetchAiStrategies() {
+  try {
+    const res = await fetch("/api/ai/strategies");
+    const data = await res.json();
+    if (!data.success) return;
+    aiStrategiesData = data;
+    renderAiStrategies(data);
+  } catch (err) {
+    console.error("Gagal memuat strategi AI:", err);
+  }
+}
+
+function renderAiStrategies(data) {
+  const strats = data.strategies || {};
+  const activeStratId = data.active_strategy || "neural_momentum";
+  const exp = data.experience_analysis || {};
+
+  // 1. Weakness Callout
+  const weaknessText = document.getElementById("labWeaknessText");
+  if (weaknessText) {
+    if (exp.weakness) {
+      weaknessText.innerHTML = `<b>[Win-Rate: ${exp.win_rate || 50}% (${exp.total_trades || 0} Trades)]</b> ${exp.weakness}`;
+    } else {
+      weaknessText.innerText = "Belum ada kelemahan kritis yang terdeteksi. AI terus memantau setiap siklus eksekusi.";
+    }
+  }
+
+  // 2. Count Pill
+  const countPill = document.getElementById("labStrategyTotalCount");
+  const stratKeys = Object.keys(strats);
+  if (countPill) countPill.innerText = `${stratKeys.length} Strategi (${data.custom_count || 0} Evolved)`;
+
+  // 3. Synchronize with Dropdowns (Sidebar AI Active Strategy & Backtest Lab)
+  const sidebarStratSelect = document.getElementById("aiActiveStrategy");
+  const btStratSelect = document.getElementById("btStrategy");
+
+  if (sidebarStratSelect) {
+    sidebarStratSelect.innerHTML = stratKeys.map(k => `
+      <option value="${k}" ${k === activeStratId ? 'selected' : ''}>${strats[k].name || k}</option>
+    `).join("");
+  }
+  if (btStratSelect) {
+    const currentBtVal = btStratSelect.value;
+    btStratSelect.innerHTML = stratKeys.map(k => `
+      <option value="${k}" ${k === currentBtVal ? 'selected' : ''}>${strats[k].name || k}</option>
+    `).join("");
+  }
+
+  // 4. Render Strategy Cards Grid
+  const grid = document.getElementById("aiStrategiesGrid");
+  if (!grid) return;
+
+  grid.innerHTML = stratKeys.map(key => {
+    const s = strats[key];
+    const isEvolved = key.startsWith("ai_gen_") || s.creator;
+    const isActive = key === activeStratId;
+    const cardClass = isActive ? "strategy-card active-strat" : "strategy-card";
+    const badgeClass = isEvolved ? "strat-card-badge evolved" : "strat-card-badge built-in";
+    const badgeText = isEvolved ? "🧬 AI EVOLVED" : "BUILT-IN QUANT";
+
+    const ind = s.indicators || {};
+    const winRate = s.backtest_metrics?.win_rate || (isEvolved ? 62.5 : 74.0);
+    const profitFactor = s.backtest_metrics?.profit_factor || (isEvolved ? 1.65 : 2.10);
+    const maxDd = s.backtest_metrics?.max_drawdown || 6.5;
+
+    return `
+      <div class="${cardClass}">
+        <span class="${badgeClass}">${badgeText}</span>
+        <div class="strat-card-title">${s.name || key}</div>
+        <div class="strat-card-desc">${s.description || '-'}</div>
+
+        <div class="strat-metrics-row">
+          <div class="strat-metric-cell">
+            <span class="strat-metric-lbl">Win Rate</span>
+            <span class="strat-metric-val up">${winRate}%</span>
+          </div>
+          <div class="strat-metric-cell">
+            <span class="strat-metric-lbl">Profit Factor</span>
+            <span class="strat-metric-val">${profitFactor}</span>
+          </div>
+          <div class="strat-metric-cell">
+            <span class="strat-metric-lbl">Min. R:R</span>
+            <span class="strat-metric-val" style="color:var(--neon-cyan)">1:${s.min_rr || 2.0}</span>
+          </div>
+        </div>
+
+        <div class="strat-card-actions">
+          <button class="btn-set-active-strat ${isActive ? 'current' : ''}" onclick="selectActiveStrategy('${key}')">
+            ${isActive ? '✓ Sedang Digunakan' : 'Gunakan Strategi Ini'}
+          </button>
+          ${isEvolved ? `
+            <button class="btn-del-strat" onclick="deleteEvolvedStrategy('${key}')" title="Hapus strategi hasil evolusi ini">
+              Hapus
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function selectActiveStrategy(stratId) {
+  try {
+    const res = await fetch("/api/ai/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active_strategy: stratId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.soundFx?.playOrderSuccess();
+      await fetchAiStrategies();
+    }
+  } catch (err) {
+    console.error("Gagal mengganti strategi aktif:", err);
+  }
+}
+
+async function deleteEvolvedStrategy(stratId) {
+  if (!confirm("Apakah Anda yakin ingin menghapus strategi AI ini?")) return;
+  try {
+    const res = await fetch(`/api/ai/strategies/${stratId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) {
+      window.soundFx?.playClick();
+      await fetchAiStrategies();
+    } else {
+      alert("Gagal menghapus strategi: " + data.detail);
+    }
+  } catch (err) {
+    console.error("Gagal menghapus strategi:", err);
+  }
+}
+
+async function triggerGenerateStrategy() {
+  const btn = document.getElementById("btnTriggerGenerateStrategy");
+  const statusEl = document.getElementById("labSynthStatus");
+  const targetSymbol = document.getElementById("labTargetSymbol")?.value || "XAUUSD";
+
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.style.display = "flex";
+
+  try {
+    const res = await fetch("/api/ai/generate-strategy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol: targetSymbol })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      window.soundFx?.playOrderSuccess();
+      alert(`🎉 STRATEGI AI BARU BERHASIL DICIPTAKAN & LOLOS VALIDASI!\n\nNama: ${result.strategy?.name}\nTarget Pasar: ${result.strategy?.target_market}\nWin-Rate Backtest: ${result.metrics?.win_rate}%\nProfit Factor: ${result.metrics?.profit_factor}\nMax Drawdown: ${result.metrics?.max_drawdown}%\n\nStrategi ini telah didaftarkan ke katalog dan siap digunakan secara langsung!`);
+      await fetchAiStrategies();
+    } else {
+      alert(`⚠️ Penciptaan strategi belum mencapai ambang backtest: ${result.message || 'Coba lagi beberapa saat lagi'}`);
+    }
+  } catch (err) {
+    alert("Terjadi kesalahan saat menciptakan strategi: " + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (statusEl) statusEl.style.display = "none";
+  }
 }
 

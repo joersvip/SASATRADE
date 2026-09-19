@@ -6,6 +6,13 @@ import random
 import httpx
 from typing import Dict, List, Any, Optional
 
+try:
+    from backend.market_intel import MarketIntel
+    from backend.strategy_generator import StrategyGenerator
+except ImportError:
+    from market_intel import MarketIntel
+    from strategy_generator import StrategyGenerator
+
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 AI_CONFIG_FILE = os.path.join(DATA_DIR, "ai_config.json")
 AI_MEMORY_FILE = os.path.join(DATA_DIR, "ai_memory.json")
@@ -137,6 +144,14 @@ class AIEngine:
             "min_lot_limit": 0.01
         }
         self.recent_signals: List[Dict[str, Any]] = []
+
+        # Market Intelligence & Autonomous Strategy Generator
+        self.market_intel = MarketIntel(ai_engine=self)
+        self.strategy_generator = StrategyGenerator(ai_engine=self)
+
+        # Register existing custom evolved strategies into active catalog
+        for sid, sdata in self.strategy_generator.custom_strategies.items():
+            self.strategies[sid] = sdata
 
 
     def _load_memory(self) -> Dict[str, Any]:
@@ -638,6 +653,42 @@ class AIEngine:
                     reasons.append("Neural Micro-Scorer: Bearish wick rejection terdeteksi pada resistance")
                     reasons.append("Penyerapan volume seller lebih dominan")
 
+        elif strategy_id in self.strategies:
+            # Evaluasi Strategi Otonom Hasil Evolved AI / LLM
+            strat_info = self.strategies[strategy_id]
+            logic = strat_info.get("logic_type", "trend_confluence")
+            ind_cfg = strat_info.get("indicators", {})
+            rsi_os = ind_cfg.get("rsi_oversold", 35)
+            rsi_ob = ind_cfg.get("rsi_overbought", 65)
+
+            if logic == "trend_confluence":
+                if ema9 > ema21 and rsi > 48 and rsi < rsi_ob:
+                    signal_dir = "BUY"
+                    confidence = round(random.uniform(80.0, 93.0), 1)
+                    reasons.append(f"🧬 AI Evolved Trend: EMA Alignment + RSI Momentum ({rsi})")
+                elif ema9 < ema21 and rsi < 52 and rsi > rsi_os:
+                    signal_dir = "SELL"
+                    confidence = round(random.uniform(80.0, 93.0), 1)
+                    reasons.append(f"🧬 AI Evolved Trend: Bearish EMA Alignment + RSI ({rsi})")
+            elif logic == "mean_reversion":
+                if rsi <= rsi_os:
+                    signal_dir = "BUY"
+                    confidence = round(random.uniform(82.0, 94.0), 1)
+                    reasons.append(f"🧬 AI Evolved Reversion: RSI Oversold ({rsi} <= {rsi_os})")
+                elif rsi >= rsi_ob:
+                    signal_dir = "SELL"
+                    confidence = round(random.uniform(82.0, 94.0), 1)
+                    reasons.append(f"🧬 AI Evolved Reversion: RSI Overbought ({rsi} >= {rsi_ob})")
+            else:  # breakout
+                if cur_p > indicators["bb_upper"]:
+                    signal_dir = "BUY"
+                    confidence = round(random.uniform(79.0, 91.0), 1)
+                    reasons.append("🧬 AI Evolved Breakout: Upper Bollinger Breakout dengan ekspansi volatilitas")
+                elif cur_p < indicators["bb_lower"]:
+                    signal_dir = "SELL"
+                    confidence = round(random.uniform(79.0, 91.0), 1)
+                    reasons.append("🧬 AI Evolved Breakout: Lower Bollinger Breakdown")
+
         # Multi-Timeframe (MTF) Confluence Filter
         if signal_dir and h1_candles and len(h1_candles) >= 15:
             h1_ind = self.calculate_indicators(h1_candles)
@@ -661,6 +712,28 @@ class AIEngine:
                     elif h1_cur < h1_ema21 < h1_ema50:
                         confidence = round(min(confidence + 5.5, 98.0), 1)
                         reasons.append("🛡️ MTF Filter: Tren makro H1 Bearish selaras mengonfirmasi SELL!")
+
+        # High-Impact News Protection Shield (Market Intel)
+        if hasattr(self, "market_intel") and self.market_intel and signal_dir:
+            shield = self.market_intel.is_high_impact_news_near(symbol)
+            if shield.get("shield_active"):
+                mins = shield.get("minutes_away", 999)
+                evt = shield.get("event", "Economic News")
+                reasons.append(f"🛡️ NEWS SHIELD: Berita High-Impact '{evt}' dalam {mins} menit")
+                # Jika berita < 15 menit, batalkan entry untuk mencegah slippage fatal
+                if abs(mins) <= 15:
+                    return None
+                # Jika 15-30 menit, naikkan penalti proteksi
+                confidence = max(50.0, confidence - 6.0)
+
+            # Internet Macro Sentiment Bias
+            sentiment_summary = getattr(self.market_intel, "sentiment_score", 0.0)
+            if signal_dir == "BUY" and sentiment_summary > 15:
+                confidence = round(min(confidence + 3.0, 98.5), 1)
+                reasons.append(f"🌐 Macro Sentiment: Bullish Bias ({sentiment_summary:+.1f}%) memperkuat sinyal")
+            elif signal_dir == "SELL" and sentiment_summary < -15:
+                confidence = round(min(confidence + 3.0, 98.5), 1)
+                reasons.append(f"🌐 Macro Sentiment: Bearish Bias ({sentiment_summary:+.1f}%) memperkuat sinyal")
 
         # Apply Learned Adaptive Strategy Weight
         strat_weight = self.memory.get("strategy_weights", {}).get(strategy_id, 1.0)
@@ -687,6 +760,10 @@ class AIEngine:
             tp_price = round(entry_price - tp_dist, digits)
 
         # AI Engine source label
+        provider_tag = "ApexAI Quant"
+        if self.api_config.get("enabled"):
+            provider_tag = self.api_config.get("model", "ApexAI Quant")
+
         # AI Smart Position Sizing
         recommended_lot = self.calculate_lot_size(
             symbol=symbol,

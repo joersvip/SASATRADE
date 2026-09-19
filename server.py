@@ -478,6 +478,55 @@ def trigger_ai_scan():
     trading_engine._run_ai_auto_scan()
     return {"success": True, "recent_signals": ai_engine.recent_signals[:5]}
 
+# Internet Market Intelligence & High-Impact News Shield
+@app.get("/api/ai/market-intel")
+async def get_market_intel_endpoint():
+    try:
+        summary = await ai_engine.market_intel.get_intel_summary()
+        return {"success": True, **summary}
+    except Exception as e:
+        return {"success": False, "error": str(e), "events": [], "news": [], "sentiment": "NEUTRAL", "sentiment_score": 0.0}
+
+# Autonomous AI Strategy Generator & Lab
+@app.get("/api/ai/strategies")
+def get_ai_strategies_endpoint():
+    return {
+        "success": True,
+        "active_strategy": ai_engine.settings.get("active_strategy"),
+        "strategies": ai_engine.strategies,
+        "custom_count": len(ai_engine.strategy_generator.custom_strategies),
+        "experience_analysis": ai_engine.strategy_generator.analyze_trading_experience()
+    }
+
+class GenerateStrategyModel(BaseModel):
+    symbol: Optional[str] = "XAUUSD"
+
+@app.post("/api/ai/generate-strategy")
+async def generate_strategy_endpoint(body: GenerateStrategyModel):
+    symbol = body.symbol or "XAUUSD"
+    candles = market_feed.get_candles(symbol, "15m")
+    result = await ai_engine.strategy_generator.generate_and_validate(target_symbol=symbol, market_candles=candles)
+    if result.get("success"):
+        strat_name = result.get("strategy", {}).get("name", "Strategi Baru")
+        wr = result.get("metrics", {}).get("win_rate", 0)
+        pf = result.get("metrics", {}).get("profit_factor", 0)
+        trading_engine.log_event(
+            f"🧬 AI Otonom berhasil menciptakan strategi baru: '{strat_name}' (Win-Rate: {wr}%, Profit Factor: {pf})",
+            level="success"
+        )
+    return result
+
+@app.delete("/api/ai/strategies/{strategy_id}")
+def delete_strategy_endpoint(strategy_id: str):
+    if strategy_id in ai_engine.strategy_generator.custom_strategies:
+        del ai_engine.strategy_generator.custom_strategies[strategy_id]
+        ai_engine.strategy_generator.save_custom_strategies()
+        if strategy_id in ai_engine.strategies:
+            del ai_engine.strategies[strategy_id]
+        trading_engine.log_event(f"Strategi kustom '{strategy_id}' dihapus dari sistem", level="info")
+        return {"success": True, "message": "Strategi berhasil dihapus"}
+    raise HTTPException(status_code=404, detail="Strategi tidak ditemukan atau merupakan strategi bawaan sistem.")
+
 # Backtest Laboratory Endpoint
 class RunBacktestModel(BaseModel):
     symbol: str = "BTCUSDT"

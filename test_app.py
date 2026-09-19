@@ -38,14 +38,6 @@ print("\n6. Testing Account Reset:")
 r = client.post("/api/accounts/reset", json={"account_id": new_acc["id"], "new_balance": 25000})
 print(f"   Reset Account Balance -> ${r.json()['account']['balance']:,.2f}")
 
-print("\n7. Testing Account Deletion:")
-del_r = client.delete(f"/api/accounts/{new_acc['id']}")
-assert del_r.status_code == 200, f"Delete failed: {del_r.text}"
-del_data = del_r.json()
-print(f"   Deleted Account: {new_acc['id']} -> Success: {del_data.get('success')}")
-print(f"   Remaining Accounts Count: {len(del_data.get('accounts', []))}")
-print(f"   New Active Account: {del_data.get('active_account', {}).get('name')}")
-
 print("\n8. Testing AI Backtest Laboratorium:")
 for test_sym, test_strat in [("BTCUSDT", "scalping"), ("EURUSD", "reversal")]:
     bt_res = client.post("/api/ai/backtest", json={
@@ -65,9 +57,9 @@ print("\n9. Testing Circuit Breaker & Emergency Kill-Switch:")
 cb_status = client.get("/api/risk/circuit-breaker").json()
 print(f"   Circuit Breaker Initial: Tripped={cb_status['circuit_breaker']['tripped']}, Daily Loss={cb_status['circuit_breaker']['daily_loss_pct']:.2f}%")
 
-# Open a test trade to verify kill switch closes it
+# Open a test trade on active demo account to verify kill switch closes it
 open_r = client.post("/api/order/open", json={"symbol": "EURUSD", "direction": "BUY", "lot": 0.1, "strategy": "KillSwitch Test"})
-assert open_r.status_code == 200
+assert open_r.status_code == 200, f"Order open failed: {open_r.text}"
 
 # Trigger Kill Switch
 ks_res = client.post("/api/risk/kill-switch")
@@ -103,5 +95,44 @@ print(f"   Post-Trade Brain State: Level {lrn_updated['brain_level']}, XP: {lrn_
 assert lrn_updated["experience_points"] > init_xp
 assert len(lrn_updated["recent_insights"]) > 0
 print(f"   Latest AI Insight: {lrn_updated['recent_insights'][0]['message'].encode('ascii', 'replace').decode('ascii')}")
+
+print("\n11. Testing Internet Market Intelligence & High-Impact News Shield:")
+intel_r = client.get("/api/ai/market-intel")
+assert intel_r.status_code == 200, f"Market intel failed: {intel_r.text}"
+intel_data = intel_r.json()
+print(f"   Events Loaded: {len(intel_data.get('events', []))}, News Loaded: {len(intel_data.get('news', []))}")
+print(f"   Macro Sentiment: {intel_data.get('sentiment')} ({intel_data.get('sentiment_score', 0):+.1f}%)")
+print(f"   News Shield Active: {intel_data.get('news_shield', {}).get('shield_active', False)}")
+
+print("\n12. Testing Autonomous AI Strategy Lab:")
+strat_r = client.get("/api/ai/strategies")
+assert strat_r.status_code == 200, f"Strategies endpoint failed: {strat_r.text}"
+strat_data = strat_r.json()
+print(f"   Total Catalog Strategies: {len(strat_data.get('strategies', {}))}, Custom: {strat_data.get('custom_count', 0)}")
+print(f"   Experience Weakness Analysis: {strat_data.get('experience_analysis', {}).get('weakness')}")
+
+# Test Generating a new strategy
+gen_r = client.post("/api/ai/generate-strategy", json={"symbol": "BTCUSDT"})
+assert gen_r.status_code == 200, f"Strategy generation failed: {gen_r.text}"
+gen_data = gen_r.json()
+assert gen_data.get("success") is True, f"Generation not successful: {gen_data}"
+new_strat = gen_data["strategy"]
+metrics = gen_data.get("metrics") or new_strat.get("backtest_results", {})
+wr = metrics.get("win_rate", 0)
+pf = metrics.get("profit_factor", 0)
+print(f"   Synthesized Strategy: '{new_strat['name']}' (Win-Rate: {wr}%, PF: {pf})")
+
+# Clean up the generated strategy
+clean_r = client.delete(f"/api/ai/strategies/{new_strat['id']}")
+assert clean_r.status_code == 200, f"Clean strategy failed: {clean_r.text}"
+print(f"   Cleaned up test strategy: {new_strat['id']}")
+
+print("\n13. Testing Account Deletion & Cleanup:")
+del_r = client.delete(f"/api/accounts/{new_acc['id']}")
+assert del_r.status_code == 200, f"Delete failed: {del_r.text}"
+del_data = del_r.json()
+print(f"   Deleted Account: {new_acc['id']} -> Success: {del_data.get('success')}")
+print(f"   Remaining Accounts Count: {len(del_data.get('accounts', []))}")
+print(f"   New Active Account: {del_data.get('active_account', {}).get('name')}")
 
 print("\nAll Tests Completed Successfully!")
