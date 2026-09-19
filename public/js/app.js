@@ -1635,7 +1635,9 @@ function openAccountModal() {
         </div>
         <div class="acc-actions-wrap">
           ${!isActive ? `<button class="btn-switch-acc" onclick="window.switchAccount('${acc.id}')">Pilih Akun</button>` : ''}
-          <button class="btn-reset-acc" onclick="window.resetAccountBalance('${acc.id}')">Reset Saldo</button>
+          ${acc.type === 'mt5' 
+            ? `<button class="btn-reset-acc" onclick="window.autoSyncActiveMT5Terminal()" title="Sinkronkan saldo & posisi langsung dari terminal MT5" style="border-color:rgba(0,240,144,0.4); color:#00f090;">🔄 Sinkronkan MT5</button>` 
+            : `<button class="btn-reset-acc" onclick="window.resetAccountBalance('${acc.id}')">Reset Saldo</button>`}
           ${canDelete ? `<button class="btn-delete-acc" onclick="window.deleteAccount('${acc.id}', '${safeName}', ${isActive})" title="Hapus akun ${acc.name}">
             <span style="font-size:0.8rem; line-height:1;">🗑️</span>
             <span>Hapus</span>
@@ -1726,6 +1728,7 @@ window.closeAccountModal = closeAccountModal;
 window.switchAccount = switchAccount;
 window.resetAccountBalance = resetAccountBalance;
 window.deleteAccount = deleteAccount;
+window.autoSyncActiveMT5Terminal = autoSyncActiveMT5Terminal;
 
 function openModifyModal(posId, sl, tp, sym) {
   document.getElementById("modifyPosId").value = posId;
@@ -2018,8 +2021,6 @@ async function submitRealMT5Account(e) {
   const server = document.getElementById("realMT5Server").value.trim();
   const login = document.getElementById("realMT5Login").value.trim();
   const password = document.getElementById("realMT5Password").value;
-  const balance = parseFloat(document.getElementById("realMT5Balance").value || "1000");
-  const leverage = parseInt(document.getElementById("realMT5Leverage").value || "100");
 
   try {
     const res = await fetch("/api/auth/connect-real", {
@@ -2031,10 +2032,7 @@ async function submitRealMT5Account(e) {
         broker: broker,
         server: server,
         login: login,
-        password: password,
-        initial_balance: balance,
-        leverage: leverage,
-        currency: "USD"
+        password: password
       })
     });
     const data = await res.json();
@@ -2042,7 +2040,13 @@ async function submitRealMT5Account(e) {
       closeConnectRealModal();
       await fetchFullState();
       window.soundFx?.playAlert();
-      alert(`Selamat! Akun Real MetaTrader 5 [${name}] berhasil terhubung dan diaktifkan.`);
+      const curr = data.metrics?.currency || "USD";
+      const balStr = data.metrics?.balance != null ? formatCurrency(data.metrics.balance, curr) : "";
+      alert(`🎉 Selamat! Akun Real MetaTrader 5 [${name}] berhasil terhubung dan diaktifkan!\n\n` +
+            (balStr ? `● Saldo Riil Disinkronkan: ${balStr}\n` : "") +
+            `● Broker: ${data.metrics?.company || broker}\n` +
+            `● Server: ${data.metrics?.server || server}\n\n` +
+            `Seluruh saldo & data akun diambil langsung dari terminal MT5.`);
     } else {
       window.soundFx?.playError();
       alert("Gagal menghubungkan akun MT5:\n\n" + (data.detail || data.error || "Data tidak valid atau login ditolak broker."));
