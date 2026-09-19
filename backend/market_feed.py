@@ -198,16 +198,26 @@ MARKETS_CONFIG = {
 }
 
 class MarketFeedManager:
-    def __init__(self):
+    def __init__(self, mt5_bridge=None):
+        self.mt5_bridge = mt5_bridge
+        self.markets_config: Dict[str, Dict[str, Any]] = dict(MARKETS_CONFIG)
+        self.broker_symbol_map: Dict[str, str] = {}
         self.prices: Dict[str, Dict[str, Any]] = {}
         self.candles: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
         self.last_sync_time = 0
         self._init_defaults()
         self.sync_real_market_data()
+        if self.mt5_bridge and self.mt5_bridge.is_available:
+            self.sync_markets_from_mt5(self.mt5_bridge)
+
+    def set_mt5_bridge(self, mt5_bridge):
+        self.mt5_bridge = mt5_bridge
+        if self.mt5_bridge and self.mt5_bridge.is_available:
+            self.sync_markets_from_mt5(self.mt5_bridge)
 
     def _init_defaults(self):
         now = int(time.time())
-        for symbol, cfg in MARKETS_CONFIG.items():
+        for symbol, cfg in self.markets_config.items():
             base = cfg["default_price"]
             digits = cfg["digits"]
             spread = cfg["spread_pips"] * cfg["pip_size"]
@@ -217,6 +227,7 @@ class MarketFeedManager:
 
             self.prices[symbol] = {
                 "symbol": symbol,
+                "broker_symbol": cfg.get("broker_symbol", symbol),
                 "name": cfg["name"],
                 "category": cfg["category"],
                 "digits": digits,
@@ -238,14 +249,156 @@ class MarketFeedManager:
                 "1D": []
             }
 
+    def sync_markets_from_mt5(self, mt5_bridge=None) -> Dict[str, Any]:
+        """
+        Sinkronisasi seluruh pasar yang tersedia pada akun MetaTrader 5 broker.
+        Menambahkan semua instrumen pasar broker ke dalam konfigurasi aplikasi secara dinamis.
+        """
+        bridge = mt5_bridge or self.mt5_bridge
+        if not bridge or not bridge.is_available:
+            logger.warning("MT5 bridge tidak tersedia untuk sinkronisasi pasar")
+            return {"success": False, "error": "MT5 bridge tidak tersedia"}
+
+        try:
+            mt5 = bridge.mt5
+            symbols = mt5.symbols_get()
+            if not symbols:
+                bridge.auto_connect_active_terminal()
+                symbols = mt5.symbols_get()
+
+            if not symbols:
+                return {"success": False, "error": "Tidak dapat mengambil daftar simbol dari terminal MT5"}
+
+            added_count = 0
+            updated_count = 0
+            now = int(time.time())
+
+            for s in symbols:
+                b_name = s.name
+                path = s.path or ""
+                desc = s.description or b_name
+                
+                # Bersihkan suffix broker ('m', 'c', '.r', '_i', '#')
+                clean_sym = b_name
+                for suf in ['m', 'c', '.r', '_i', '#']:
+                    if clean_sym.endswith(suf) and len(clean_sym) > len(suf) + 1:
+                        clean_sym = clean_sym[:-len(suf)]
+                        break
+
+                # Tentukan kategori pasar
+                category = "forex"
+                unit = "Lots"
+                if "Crypto" in path:
+                    category = "crypto"
+                    unit = clean_sym[:3] if len(clean_sym) >= 6 else "Coin"
+                elif "Energies" in path or any(k in b_name.upper() for k in ["XAU", "XAG", "OIL", "GAS"]):
+                    category = "commodities"
+                    unit = "oz" if ("XAU" in b_name or "XAG" in b_name) else "Barrels"
+                elif "Indices" in path or "Idx" in path:
+                    category = "indices"
+                    unit = "Contracts"
+                elif "Stocks" in path:
+                    category = "stocks"
+                    unit = "Shares"
+
+                # Pastikan simbol aktif di Market Watch MT5 agar tick real-time mengalir
+                mt5.symbol_select(b_name, True)
+                tick = mt5.symbol_info_tick(b_name)
+
+                digits = int(s.digits)
+                point = float(s.point or 0.0001)
+                pip_size = point * 10 if (category == "forex" and digits in [3, 5]) else point
+                if pip_size <= 0:
+                    pip_size = 0.0001
+
+                spread_pips = round((float(s.spread) * point) / pip_size, 1) if pip_size > 0 else 1.0
+                lot_unit = float(s.trade_contract_size or 100000.0)
+
+                bid = float(tick.bid) if (tick and tick.bid) else 0.0
+                ask = float(tick.ask) if (tick and tick.ask) else 0.0
+                last_p = float(tick.last) if (tick and getattr(tick, 'last', 0)) else (bid or ask or 1.0)
+                if ask <= 0 and last_p > 0:
+                    ask = round(last_p + (spread_pips * pip_size / 2), digits)
+                if bid <= 0 and last_p > 0:
+                    bid = round(last_p - (spread_pips * pip_size / 2), digits)
+
+                is_new = clean_sym not in self.markets_config
+
+                cfg = {
+                    "symbol": clean_sym,
+                    "broker_symbol": b_name,
+                    "yahoo_symbol": self.markets_config.get(clean_sym, {}).get("yahoo_symbol"),
+                    "name": desc,
+                    "category": category,
+                    "digits": digits,
+                    "pip_size": pip_size,
+                    "spread_pips": spread_pips,
+                    "lot_unit": lot_unit,
+                    "unit": unit,
+                    "default_price": last_p
+                }
+                self.markets_config[clean_sym] = cfg
+                self.broker_symbol_map[b_name] = clean_sym
+
+                # Inisialisasi atau perbarui harga pasar
+                if clean_sym not in self.prices or is_new:
+                    self.prices[clean_sym] = {
+                        "symbol": clean_sym,
+                        "broker_symbol": b_name,
+                        "name": desc,
+                        "category": category,
+                        "digits": digits,
+                        "ask": ask,
+                        "bid": bid,
+                        "last": last_p,
+                        "high24h": round(last_p * 1.01, digits),
+                        "low24h": round(last_p * 0.99, digits),
+                        "change24h": 0.0,
+                        "volume24h": float(getattr(tick, 'volume', 10000.0) or 10000.0),
+                        "timestamp": now,
+                        "source": "EXNESS MT5 LIVE"
+                    }
+                    if clean_sym not in self.candles:
+                        self.candles[clean_sym] = {"1m": [], "5m": [], "15m": [], "1h": [], "1D": []}
+                    added_count += 1
+                else:
+                    self.prices[clean_sym]["broker_symbol"] = b_name
+                    self.prices[clean_sym]["ask"] = ask
+                    self.prices[clean_sym]["bid"] = bid
+                    self.prices[clean_sym]["last"] = last_p
+                    self.prices[clean_sym]["digits"] = digits
+                    self.prices[clean_sym]["source"] = "EXNESS MT5 LIVE"
+                    updated_count += 1
+
+            logger.info(f"Berhasil sinkronisasi {len(symbols)} pasar dari broker MT5 (Ditambahkan baru: {added_count}, Diperbarui: {updated_count})")
+            return {
+                "success": True,
+                "total_symbols": len(symbols),
+                "added_count": added_count,
+                "updated_count": updated_count,
+                "categories": {
+                    "forex": sum(1 for c in self.markets_config.values() if c.get("category") == "forex"),
+                    "crypto": sum(1 for c in self.markets_config.values() if c.get("category") == "crypto"),
+                    "commodities": sum(1 for c in self.markets_config.values() if c.get("category") == "commodities"),
+                    "indices": sum(1 for c in self.markets_config.values() if c.get("category") == "indices"),
+                    "stocks": sum(1 for c in self.markets_config.values() if c.get("category") == "stocks"),
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error sinkronisasi pasar dari MT5: {e}")
+            return {"success": False, "error": str(e)}
+
     def sync_real_market_data(self):
         """Ambil data harga dan candlestick real langsung dari pasar keuangan global"""
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         now = int(time.time())
 
-        # Sync top symbols
-        for symbol, cfg in MARKETS_CONFIG.items():
-            yahoo_sym = cfg["yahoo_symbol"]
+        # Sync top symbols dari markets_config yang memiliki yahoo_symbol
+        for symbol, cfg in list(self.markets_config.items()):
+            yahoo_sym = cfg.get("yahoo_symbol")
+            if not yahoo_sym:
+                continue
+
             digits = cfg["digits"]
             spread = cfg["spread_pips"] * cfg["pip_size"]
 
@@ -267,13 +420,14 @@ class MarketFeedManager:
                                 prev_close = meta.get("chartPreviousClose") or last_p
                                 change_pct = round(((last_p - prev_close) / prev_close) * 100, 2) if prev_close else 0.0
 
-                                self.prices[symbol]["last"] = last_p
-                                self.prices[symbol]["ask"] = ask
-                                self.prices[symbol]["bid"] = bid
-                                self.prices[symbol]["high24h"] = round(meta.get("regularMarketDayHigh", last_p * 1.01), digits)
-                                self.prices[symbol]["low24h"] = round(meta.get("regularMarketDayLow", last_p * 0.99), digits)
-                                self.prices[symbol]["change24h"] = change_pct
-                                self.prices[symbol]["timestamp"] = now
+                                if symbol in self.prices:
+                                    self.prices[symbol]["last"] = last_p
+                                    self.prices[symbol]["ask"] = ask
+                                    self.prices[symbol]["bid"] = bid
+                                    self.prices[symbol]["high24h"] = round(meta.get("regularMarketDayHigh", last_p * 1.01), digits)
+                                    self.prices[symbol]["low24h"] = round(meta.get("regularMarketDayLow", last_p * 0.99), digits)
+                                    self.prices[symbol]["change24h"] = change_pct
+                                    self.prices[symbol]["timestamp"] = now
 
                                 # Build real candles
                                 timestamps = result[0].get("timestamp", [])
@@ -296,14 +450,15 @@ class MarketFeedManager:
                                             "volume": round(volumes[i] or 10.0, 1)
                                         })
                                 if clean_candles:
+                                    if symbol not in self.candles:
+                                        self.candles[symbol] = {}
                                     self.candles[symbol]["15m"] = clean_candles[-60:]
                                     self.candles[symbol]["5m"] = clean_candles[-60:]
                                     self.candles[symbol]["1m"] = clean_candles[-60:]
                                     self.candles[symbol]["1h"] = clean_candles[-60:]
                                     self.candles[symbol]["1D"] = clean_candles[-30:]
 
-            except Exception as e:
-                # Fallback ke last known real price
+            except Exception:
                 pass
 
         self.last_sync_time = now
@@ -339,7 +494,7 @@ class MarketFeedManager:
 
                         if sym and price_str and sym in self.prices:
                             price = float(price_str)
-                            cfg = MARKETS_CONFIG[sym]
+                            cfg = self.get_symbol_info(sym)
                             digits = cfg["digits"]
                             spread = cfg["spread_pips"] * cfg["pip_size"]
                             price = round(price, digits)
@@ -367,25 +522,56 @@ class MarketFeedManager:
                 await asyncio.sleep(3)
 
     def tick(self) -> List[Dict[str, Any]]:
-        """Siklus tick produksi: sinkronisasi periodik harga riil dan update mikro-tick"""
+        """Siklus tick produksi: sinkronisasi MT5 real-time & update mikro-tick"""
         now = int(time.time())
-        # Re-sync harga pasar riil setiap 15 detik
+
+        # 1. Jika MT5 terhubung, update tick langsung dari broker Exness
+        if self.mt5_bridge and self.mt5_bridge.is_available and self.mt5_bridge.connected:
+            try:
+                mt5 = self.mt5_bridge.mt5
+                for sym, p in self.prices.items():
+                    b_sym = p.get("broker_symbol") or sym
+                    tick = mt5.symbol_info_tick(b_sym)
+                    if tick and getattr(tick, 'bid', 0) > 0:
+                        digits = p.get("digits", 4)
+                        bid = round(float(tick.bid), digits)
+                        ask = round(float(tick.ask or tick.bid), digits)
+                        last_p = round(float(getattr(tick, 'last', 0) or bid), digits)
+                        p["bid"] = bid
+                        p["ask"] = ask
+                        p["last"] = last_p
+                        p["timestamp"] = now
+
+                        # Update candlestick terakhir
+                        for tf in ["1m", "5m", "15m"]:
+                            c_list = self.candles.get(sym, {}).get(tf, [])
+                            if c_list:
+                                last_c = c_list[-1]
+                                last_c["close"] = last_p
+                                if last_p > last_c["high"]:
+                                    last_c["high"] = last_p
+                                if last_p < last_c["low"]:
+                                    last_c["low"] = last_p
+                return list(self.prices.values())
+            except Exception as e:
+                pass
+
+        # 2. Re-sync harga pasar Yahoo Finance setiap 15 detik jika MT5 tidak aktif
         if now - self.last_sync_time >= 15:
             try:
                 self.sync_real_market_data()
             except Exception:
                 pass
 
-        # Update micro-tick untuk instrumen non-websocket agar live price bar bergerak mulus
+        # 3. Update micro-tick untuk instrumen non-websocket
         for sym, p in self.prices.items():
             p["timestamp"] = now
             if sym not in ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"]:
-                cfg = MARKETS_CONFIG.get(sym)
+                cfg = self.get_symbol_info(sym)
                 if cfg:
                     digits = cfg["digits"]
                     pip = cfg["pip_size"]
                     spread = cfg["spread_pips"] * pip
-                    # Fluktuasi mikro halus (± 0.2 pip) untuk mensimulasikan pergerakan tick orderbook
                     delta = random.choice([-1, 0, 1]) * (pip * 0.2)
                     new_last = round(p["last"] + delta, digits)
                     p["last"] = new_last
@@ -408,12 +594,73 @@ class MarketFeedManager:
         return list(self.prices.values())
 
     def get_candles(self, symbol: str, timeframe: str = "15m"):
-        if symbol not in self.candles:
-            symbol = "EURUSD"
-        tf_data = self.candles[symbol].get(timeframe)
-        if not tf_data:
-            tf_data = self.candles[symbol].get("15m", [])
-        return tf_data
+        # Cari simbol broker dan nama clean
+        clean_sym = symbol
+        broker_sym = symbol
+        if symbol in self.markets_config:
+            broker_sym = self.markets_config[symbol].get("broker_symbol", symbol)
+        elif symbol in self.broker_symbol_map:
+            clean_sym = self.broker_symbol_map[symbol]
+            broker_sym = symbol
+
+        # Jika MT5 terhubung, ambil candlestick riil langsung dari broker MT5
+        if self.mt5_bridge and self.mt5_bridge.is_available and self.mt5_bridge.connected:
+            try:
+                mt5 = self.mt5_bridge.mt5
+                tf_map = {
+                    "1m": mt5.TIMEFRAME_M1,
+                    "5m": mt5.TIMEFRAME_M5,
+                    "15m": mt5.TIMEFRAME_M15,
+                    "30m": mt5.TIMEFRAME_M30,
+                    "1h": mt5.TIMEFRAME_H1,
+                    "4h": mt5.TIMEFRAME_H4,
+                    "1D": mt5.TIMEFRAME_D1,
+                    "1d": mt5.TIMEFRAME_D1
+                }
+                tf_val = tf_map.get(timeframe, mt5.TIMEFRAME_M15)
+                mt5.symbol_select(broker_sym, True)
+                rates = mt5.copy_rates_from_pos(broker_sym, tf_val, 0, 100)
+                if rates is not None and len(rates) > 0:
+                    cfg = self.get_symbol_info(clean_sym)
+                    digits = cfg.get("digits", 4)
+                    candles = []
+                    for r in rates:
+                        candles.append({
+                            "time": int(r[0]),
+                            "open": round(float(r[1]), digits),
+                            "high": round(float(r[2]), digits),
+                            "low": round(float(r[3]), digits),
+                            "close": round(float(r[4]), digits),
+                            "volume": round(float(r[5]), 1)
+                        })
+                    if clean_sym not in self.candles:
+                        self.candles[clean_sym] = {}
+                    self.candles[clean_sym][timeframe] = candles
+                    return candles
+            except Exception as e:
+                logger.debug(f"MT5 rates copy failed for {broker_sym}: {e}")
+
+        # Fallback ke in-memory cache
+        if clean_sym in self.candles:
+            tf_data = self.candles[clean_sym].get(timeframe)
+            if tf_data:
+                return tf_data
+            for fallback_tf in ["15m", "1h", "5m", "1m", "1D"]:
+                if self.candles[clean_sym].get(fallback_tf):
+                    return self.candles[clean_sym][fallback_tf]
+
+        return self.candles.get("EURUSD", {}).get(timeframe, [])
 
     def get_symbol_info(self, symbol: str):
-        return MARKETS_CONFIG.get(symbol, MARKETS_CONFIG["EURUSD"])
+        if symbol in self.markets_config:
+            return self.markets_config[symbol]
+        if symbol in self.broker_symbol_map:
+            clean = self.broker_symbol_map[symbol]
+            return self.markets_config.get(clean, self.markets_config.get("EURUSD"))
+        for suf in ['m', 'c', '.r', '_i', '#']:
+            if symbol.endswith(suf):
+                cand = symbol[:-len(suf)]
+                if cand in self.markets_config:
+                    return self.markets_config[cand]
+        return self.markets_config.get("EURUSD", list(self.markets_config.values())[0])
+

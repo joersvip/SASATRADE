@@ -412,8 +412,118 @@ body {
 }
 
 /* ==========================================================================
-   TICKER BAR (REALTIME PRICES)
+   MARKET TOOLBAR & TICKER BAR (REALTIME PRICES)
    ========================================================================== */
+.market-toolbar-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 24px;
+  background: rgba(13, 18, 29, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.market-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 4px 12px;
+  flex: 1;
+  max-width: 450px;
+  transition: var(--trans-fast);
+}
+
+.market-search-box:focus-within {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.market-search-box .search-icon {
+  font-size: 0.82rem;
+  opacity: 0.7;
+}
+
+.market-search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-family: var(--font-main);
+  width: 100%;
+}
+
+.market-search-box input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-clear-search {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 4px;
+}
+
+.btn-clear-search:hover {
+  color: var(--text-primary);
+}
+
+.market-stats-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.market-counter-badge {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.market-counter-badge b {
+  color: var(--neon-cyan);
+}
+
+.btn-sync-broker-markets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.12), rgba(79, 172, 254, 0.12));
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  color: var(--neon-cyan);
+  padding: 5px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--trans-fast);
+}
+
+.btn-sync-broker-markets:hover {
+  background: rgba(0, 242, 254, 0.22);
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-sync-broker-markets.syncing .sync-icon {
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
 .ticker-strip {
   display: flex;
   overflow-x: auto;

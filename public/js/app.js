@@ -431,6 +431,7 @@ function handleTickUpdate(data) {
 function renderAll() {
   renderAccountBadge();
   renderTickerStrip();
+  updateMarketSelectDropdowns();
   renderAISettingsUI();
   renderAIBrainBadge();
   renderAISignals();
@@ -441,6 +442,29 @@ function renderAll() {
   renderLogs();
   renderCircuitBreakerStatus(appState.circuitBreaker);
   renderAILearningStats(appState.aiLearning);
+}
+
+function updateMarketSelectDropdowns() {
+  if (!appState.markets || appState.markets.length === 0) return;
+
+  // 1. Backtest symbol select
+  const btSelect = document.getElementById("btSymbol");
+  if (btSelect && btSelect.options.length <= 10) {
+    const curVal = btSelect.value;
+    btSelect.innerHTML = appState.markets.map(m => `
+      <option value="${m.symbol}" ${m.symbol === curVal ? 'selected' : ''}>${m.symbol} - ${m.name || m.category}</option>
+    `).join("");
+  }
+
+  // 2. Multi-chart slots select
+  chartSlots.forEach((slot, idx) => {
+    const sel = document.getElementById(`slotSymbolSelect${idx}`);
+    if (sel && sel.options.length <= 10) {
+      sel.innerHTML = appState.markets.map(m => `
+        <option value="${m.symbol}" ${m.symbol === slot.symbol ? 'selected' : ''}>${m.symbol} - ${m.name}</option>
+      `).join("");
+    }
+  });
 }
 
 function renderAILearningStats(lrn) {
@@ -575,10 +599,47 @@ function renderTickerStrip() {
   const container = document.getElementById("tickerStrip");
   if (!container) return;
 
-  const filtered = appState.markets.filter(m => {
-    if (appState.activeCategory === "all") return true;
-    return m.category === appState.activeCategory;
-  });
+  const countEl = document.getElementById("marketCountNum");
+  if (countEl && appState.markets) {
+    countEl.innerText = appState.markets.length;
+  }
+
+  const searchInput = document.getElementById("marketSearchInput");
+  const clearBtn = document.getElementById("btnClearSearch");
+  const query = (searchInput?.value || "").trim().toLowerCase();
+
+  if (clearBtn) {
+    clearBtn.style.display = query ? "block" : "none";
+  }
+
+  let filtered = appState.markets || [];
+
+  // Filter kategori jika bukan 'all'
+  if (appState.activeCategory && appState.activeCategory !== "all") {
+    filtered = filtered.filter(m => m.category === appState.activeCategory);
+  }
+
+  // Filter kata kunci pencarian
+  if (query) {
+    filtered = filtered.filter(m => {
+      const sym = (m.symbol || "").toLowerCase();
+      const name = (m.name || "").toLowerCase();
+      const broker = (m.broker_symbol || "").toLowerCase();
+      return sym.includes(query) || name.includes(query) || broker.includes(query);
+    });
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="padding:10px 20px; color:var(--text-muted); font-size:0.82rem; display:flex; align-items:center; gap:12px;">
+        <span>ℹ️ Tidak ada pasar ditemukan untuk "${query}".</span>
+        <button class="btn-sync-broker-markets" onclick="document.getElementById('btnSyncBrokerMarkets')?.click()" style="padding:2px 8px; font-size:0.75rem;">
+          Sinkronkan Pasar Broker MT5
+        </button>
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = filtered.map(m => {
     const isUp = m.change24h >= 0;
@@ -593,14 +654,14 @@ function renderTickerStrip() {
     const isActive = m.symbol === appState.activeSymbol ? "active" : "";
 
     return `
-      <div class="ticker-card ${isActive} ${flashClass}" onclick="selectSymbol('${m.symbol}')">
+      <div class="ticker-card ${isActive} ${flashClass}" onclick="selectSymbol('${m.symbol}')" title="${m.name} (${m.broker_symbol || m.symbol})">
         <div>
           <div class="ticker-sym">${m.symbol}</div>
           <div class="ticker-cat">${m.category}</div>
         </div>
         <div class="ticker-price-wrap">
-          <div class="ticker-price ${isUp ? 'up' : 'down'}">${m.last.toFixed(m.digits)}</div>
-          <div class="ticker-change ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${m.change24h}%</div>
+          <div class="ticker-price ${isUp ? 'up' : 'down'}">${Number(m.last || 0).toFixed(m.digits || 2)}</div>
+          <div class="ticker-change ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${m.change24h || 0}%</div>
         </div>
       </div>
     `;
@@ -988,6 +1049,45 @@ function setupEvents() {
       window.soundFx?.playClick();
     });
   });
+
+  // Market live search input
+  const marketSearchInput = document.getElementById("marketSearchInput");
+  const clearSearchBtn = document.getElementById("btnClearSearch");
+  if (marketSearchInput) {
+    marketSearchInput.addEventListener("input", () => {
+      renderTickerStrip();
+    });
+  }
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener("click", () => {
+      if (marketSearchInput) marketSearchInput.value = "";
+      renderTickerStrip();
+      marketSearchInput?.focus();
+    });
+  }
+
+  // Sync Broker Markets Button
+  const btnSyncBroker = document.getElementById("btnSyncBrokerMarkets");
+  if (btnSyncBroker) {
+    btnSyncBroker.addEventListener("click", async () => {
+      try {
+        btnSyncBroker.classList.add("syncing");
+        const res = await fetch("/api/markets/sync-broker", { method: "POST" });
+        const data = await res.json();
+        btnSyncBroker.classList.remove("syncing");
+        if (data.success) {
+          await fetchFullState();
+          alert(`✅ BERHASIL SINKRONISASI PASAR BROKER MT5!\n\nTotal Instrumen Pasar: ${data.total_symbols}\nPasar Baru Ditambahkan: ${data.added_count}\n\nKategori:\n• Forex: ${data.categories?.forex || 0}\n• Crypto: ${data.categories?.crypto || 0}\n• Komoditas & Logam: ${data.categories?.commodities || 0}\n• Indeks Saham: ${data.categories?.indices || 0}\n• Saham Global: ${data.categories?.stocks || 0}\n\nSeluruh pasar kini siap dianalisis dan ditradingkan!`);
+          window.soundFx?.playAlert();
+        } else {
+          alert(`⚠️ Gagal sinkronisasi pasar: ${data.error || 'Pastikan terminal MetaTrader 5 sedang terbuka'}`);
+        }
+      } catch (err) {
+        btnSyncBroker.classList.remove("syncing");
+        alert("Terjadi kesalahan saat sinkronisasi pasar: " + err.message);
+      }
+    });
+  }
 
   // Header Timeframe buttons (controls active focused slot)
   document.querySelectorAll("#headerTimeframeGroup .tf-btn").forEach(btn => {

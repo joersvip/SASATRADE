@@ -32,13 +32,19 @@
         <span>🌐 Semua Pasar</span>
       </button>
       <button class="market-tab-btn" data-category="forex" id="tabCategoryForex">
-        <span>💱 Forex & Emas</span>
+        <span>💱 Forex</span>
       </button>
       <button class="market-tab-btn" data-category="crypto" id="tabCategoryCrypto">
         <span>⚡ Crypto</span>
       </button>
+      <button class="market-tab-btn" data-category="commodities" id="tabCategoryCommodities">
+        <span>🥇 Komoditas & Logam</span>
+      </button>
+      <button class="market-tab-btn" data-category="indices" id="tabCategoryIndices">
+        <span>📊 Indeks Saham</span>
+      </button>
       <button class="market-tab-btn" data-category="stocks" id="tabCategoryStocks">
-        <span>📈 Saham</span>
+        <span>📈 Saham Global</span>
       </button>
     </nav>
 
@@ -122,6 +128,22 @@
         <span id="cbBannerReason">Robot telah menghentikan seluruh perdagangan dan melikuidasi posisi terbuka demi melindungi modal Anda.</span>
       </div>
       <button class="btn-reset-cb" id="btnResetCircuitBreaker">Buka Kunci (Reset Manual)</button>
+    </div>
+  </div>
+
+  <!-- MARKET TOOLBAR: SEARCH & BROKER SYNC -->
+  <div class="market-toolbar-strip">
+    <div class="market-search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="marketSearchInput" placeholder="Cari 350+ pasar trading (cth: XAU, US30, BTC, EUR, NVDA, OIL)..." autocomplete="off" />
+      <button class="btn-clear-search" id="btnClearSearch" style="display:none;" title="Hapus pencarian">✕</button>
+    </div>
+    <div class="market-stats-actions">
+      <span class="market-counter-badge" id="marketCounterBadge"><b id="marketCountNum">356</b> Pasar Aktif</span>
+      <button class="btn-sync-broker-markets" id="btnSyncBrokerMarkets" title="Sinkronkan seluruh instrumen pasar dari akun MetaTrader 5 broker">
+        <span class="sync-icon">🔄</span>
+        <span>Sinkronkan Pasar Broker MT5</span>
+      </button>
     </div>
   </div>
 

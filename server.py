@@ -20,9 +20,9 @@ logger = logging.getLogger("trading_server")
 
 # Inisialisasi Modul
 account_mgr = AccountManager()
-market_feed = MarketFeedManager()
-ai_engine = AIEngine()
 mt5_bridge = MT5Bridge()
+market_feed = MarketFeedManager(mt5_bridge=mt5_bridge)
+ai_engine = AIEngine()
 trading_engine = TradingEngine(account_mgr, market_feed, ai_engine, mt5_bridge)
 
 app = FastAPI(title="AI Auto Trading Robot & Multi-Market Dashboard")
@@ -126,6 +126,14 @@ async def startup_event():
             auto_res = mt5_bridge.auto_connect_active_terminal()
             if auto_res.get("success"):
                 logger.info("Terminal MT5 aktif terdeteksi saat startup server.")
+                metrics = mt5_bridge.get_real_account_metrics()
+                if metrics:
+                    account_mgr.sync_mt5_account(metrics)
+                market_feed.sync_markets_from_mt5(mt5_bridge)
+        
+        # Pastikan pasar broker tersinkron jika MT5 terhubung
+        if mt5_bridge.is_available and mt5_bridge.connected:
+            market_feed.sync_markets_from_mt5(mt5_bridge)
     except Exception as e:
         logger.warning(f"MT5 startup check error: {e}")
 
@@ -161,6 +169,17 @@ def get_full_state():
 @app.get("/api/markets")
 def get_markets():
     return market_feed.get_market_overview()
+
+@app.post("/api/markets/sync-broker")
+def sync_broker_markets():
+    result = market_feed.sync_markets_from_mt5(mt5_bridge)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal sinkronisasi pasar broker"))
+    trading_engine.log_event(
+        f"⚡ [SINKRONISASI PASAR MT5] {result.get('total_symbols', 0)} pasar aktif dari broker ({result.get('added_count', 0)} pasar baru ditambahkan)",
+        level="info"
+    )
+    return result
 
 @app.get("/api/candles")
 def get_candles(symbol: str = "EURUSD", timeframe: str = "15m"):
@@ -242,11 +261,13 @@ def auto_sync_mt5_terminal():
         level="success"
     )
     trading_engine._sync_mt5_live_positions(acc["id"])
+    sync_res = market_feed.sync_markets_from_mt5(mt5_bridge)
 
     return {
         "success": True, 
         "account": acc, 
         "metrics": metrics,
+        "market_sync": sync_res,
         "message": f"Akun {acc['name']} ({metrics.get('company')}) berhasil disinkronkan dari MetaTrader 5."
     }
 
