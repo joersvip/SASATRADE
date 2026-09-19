@@ -144,9 +144,22 @@
 
     <div class="market-stats-actions">
       <span class="market-counter-badge" id="marketCounterBadge"><b id="marketCountNum">356</b> Pasar Aktif</span>
+
+      <!-- Tombol Tampilkan Semua / 1 Baris -->
+      <button class="btn-ticker-action" id="btnExpandAllTickers" title="Tampilkan seluruh 350+ instrumen pasar dalam bentuk kisi multi-baris">
+        <span id="btnExpandAllIcon">⊞</span>
+        <span id="btnExpandAllText">Tampilkan Semua</span>
+      </button>
+
+      <!-- Tombol Sembunyikan / Tampilkan Ticker -->
+      <button class="btn-ticker-action" id="btnToggleTickerVisibility" title="Sembunyikan atau tampilkan baris ticker harga pasar">
+        <span id="btnToggleTickerIcon">👁️</span>
+        <span id="btnToggleTickerText">Sembunyikan</span>
+      </button>
+
       <button class="btn-sync-broker-markets" id="btnSyncBrokerMarkets" title="Sinkronkan seluruh instrumen pasar dari akun MetaTrader 5 broker">
         <span class="sync-icon">🔄</span>
-        <span>Sinkron MT5</span>
+        <span>Sync MT5</span>
       </button>
     </div>
   </div>

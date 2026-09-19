@@ -1097,6 +1097,65 @@ function setupEvents() {
     });
   });
 
+  // Ticker Strip Controls: Tampilkan Semua (Grid Mode) & Sembunyikan (Hide/Show)
+  const tickerStrip = document.getElementById("tickerStrip");
+  const btnExpandAll = document.getElementById("btnExpandAllTickers");
+  const btnExpandAllIcon = document.getElementById("btnExpandAllIcon");
+  const btnExpandAllText = document.getElementById("btnExpandAllText");
+
+  const btnToggleTicker = document.getElementById("btnToggleTickerVisibility");
+  const btnToggleTickerIcon = document.getElementById("btnToggleTickerIcon");
+  const btnToggleTickerText = document.getElementById("btnToggleTickerText");
+
+  if (tickerStrip) {
+    // 1. Restore saved grid state
+    const savedTickerMode = localStorage.getItem("apexai_ticker_mode");
+    if (savedTickerMode === "grid") {
+      tickerStrip.classList.add("expanded-grid");
+      btnExpandAll?.classList.add("active");
+      if (btnExpandAllIcon) btnExpandAllIcon.innerText = "⊟";
+      if (btnExpandAllText) btnExpandAllText.innerText = "1 Baris";
+    }
+
+    // 2. Restore saved visibility state
+    const savedTickerVisible = localStorage.getItem("apexai_ticker_visible");
+    if (savedTickerVisible === "false") {
+      tickerStrip.classList.add("ticker-hidden");
+      btnToggleTicker?.classList.add("active");
+      if (btnToggleTickerIcon) btnToggleTickerIcon.innerText = "👁️‍🗨️";
+      if (btnToggleTickerText) btnToggleTickerText.innerText = "Tampilkan";
+    }
+
+    // Expand All / 1 Baris Toggle
+    btnExpandAll?.addEventListener("click", () => {
+      // If currently hidden, unhide first
+      if (tickerStrip.classList.contains("ticker-hidden")) {
+        tickerStrip.classList.remove("ticker-hidden");
+        btnToggleTicker?.classList.remove("active");
+        if (btnToggleTickerIcon) btnToggleTickerIcon.innerText = "👁️";
+        if (btnToggleTickerText) btnToggleTickerText.innerText = "Sembunyikan";
+        localStorage.setItem("apexai_ticker_visible", "true");
+      }
+
+      const isNowGrid = tickerStrip.classList.toggle("expanded-grid");
+      btnExpandAll.classList.toggle("active", isNowGrid);
+      if (btnExpandAllIcon) btnExpandAllIcon.innerText = isNowGrid ? "⊟" : "⊞";
+      if (btnExpandAllText) btnExpandAllText.innerText = isNowGrid ? "1 Baris" : "Tampilkan Semua";
+      localStorage.setItem("apexai_ticker_mode", isNowGrid ? "grid" : "single");
+      window.soundFx?.playClick();
+    });
+
+    // Sembunyikan / Tampilkan Ticker Toggle
+    btnToggleTicker?.addEventListener("click", () => {
+      const isNowHidden = tickerStrip.classList.toggle("ticker-hidden");
+      btnToggleTicker.classList.toggle("active", isNowHidden);
+      if (btnToggleTickerIcon) btnToggleTickerIcon.innerText = isNowHidden ? "👁️‍🗨️" : "👁️";
+      if (btnToggleTickerText) btnToggleTickerText.innerText = isNowHidden ? "Tampilkan" : "Sembunyikan";
+      localStorage.setItem("apexai_ticker_visible", isNowHidden ? "false" : "true");
+      window.soundFx?.playClick();
+    });
+  }
+
   // Market live search input
   const marketSearchInput = document.getElementById("marketSearchInput");
   const clearSearchBtn = document.getElementById("btnClearSearch");
